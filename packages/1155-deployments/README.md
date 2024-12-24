@@ -24,7 +24,7 @@ Contains deployment scripts, deployed addresses and versions for the Zora 1155 C
 Run the entire deployment process with a single command:
 
 ```bash
-pnpm setup
+pnpm deploy-all
 ```
 
 Or follow the step-by-step process below:
