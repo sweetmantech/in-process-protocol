@@ -15,7 +15,11 @@
     "unlink-contracts": "pnpm unlink-common && pnpm run unlink-protocol-rewards && pnpm run unlink-1155",
     "link-contracts": "rm -rf ./node_modules && cd .. && pnpm install",
     "update-pending-upgrades": "pnpm tsx script/getPendingUpgrades.ts",
-    "generate": "pnpm tsx script/generateForkTests.ts"
+    "generate": "pnpm tsx script/generateForkTests.ts",
+    "setup:implementations": "source .env && forge script script/DeployMintersAndImplementations.s.sol --rpc-url https://sepolia.base.org --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --private-key $PRIVATE_KEY",
+    "setup:copy-addresses": "source .env && pnpm tsx script/copy-deployed-contracts.ts",
+    "setup:factory-proxy": "source .env && forge script script/DeployFactoryProxy.s.sol --rpc-url https://sepolia.base.org --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --private-key $PRIVATE_KEY",
+    "deploy-all": "pnpm setup:implementations && pnpm setup:copy-addresses && pnpm setup:factory-proxy"
   },
   "devDependencies": {
     "@lavamoat/preinstall-always-fail": "2.0.0",
