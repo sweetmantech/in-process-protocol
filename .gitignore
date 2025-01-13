@@ -44,3 +44,6 @@ package/chainConfigs.ts
 
 **/vocs.config.ts.*
 .vercel
+
+# misc
+instructions.md

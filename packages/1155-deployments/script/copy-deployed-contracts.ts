@@ -68,22 +68,6 @@ async function copyEnvironmentRunFiles() {
   withLatest.forEach(async ({ chainId, latest }) => {
     const filePath = `addresses/${chainId}.json`;
 
-    const fileResponse = await readFile(filePath);
-    if (fileResponse) {
-      const version = JSON.parse(fileResponse.toString("utf-8"));
-      if (
-        semverGt(
-          version.CONTRACT_1155_IMPL_VERSION,
-          latest!.returns.CONTRACT_1155_IMPL_VERSION,
-        )
-      ) {
-        console.log(
-          `skipping since ${version.CONTRACT_1155_IMPL_VERSION} is newer than deploy files (${latest!.returns.CONTRACT_1155_IMPL_VERSION})`,
-        );
-        return;
-      }
-    }
-
     await writeFile(
       filePath,
       JSON.stringify(
