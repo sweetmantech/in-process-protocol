@@ -34,7 +34,7 @@ contract ERC20MinterTest is Test {
     uint256 internal constant ZORA_PAID_MINT_REWARD_PCT = 28_571400;
     uint256 internal constant FIRST_MINTER_REWARD_PCT = 14_228500;
     uint256 immutable BPS_TO_PERCENT_8_DECIMAL_PERCISION = 100_000_000;
-    uint256 internal constant ethReward = 0.000111 ether;
+    uint256 internal constant ethReward = 0.000000111 ether;
 
     event ERC20RewardsDeposit(
         address indexed createReferral,
@@ -542,7 +542,7 @@ contract ERC20MinterTest is Test {
     }
 
     function test_ERC20MinterEthRewardTooLow(uint256 ethRewardLow) public {
-        vm.assume(ethRewardLow >= 0 ether && ethRewardLow < 0.000111 ether);
+        vm.assume(ethRewardLow >= 0 ether && ethRewardLow < 0.000000111 ether);
 
         uint96 pricePerToken = 10_000;
         uint256 quantity = 2;
@@ -559,7 +559,7 @@ contract ERC20MinterTest is Test {
         vm.deal(tokenRecipient, ethRewardLow);
 
         vm.startPrank(tokenRecipient);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Minter.InvalidETHValue.selector, 0.000111 ether * quantity, ethRewardLow));
+        vm.expectRevert(abi.encodeWithSelector(IERC20Minter.InvalidETHValue.selector, 0.000000111 ether * quantity, ethRewardLow));
         minter.mint{value: ethRewardLow}(tokenRecipient, quantity, address(target), newTokenId, pricePerToken * quantity, address(currency), mintReferral, "");
         vm.stopPrank();
     }

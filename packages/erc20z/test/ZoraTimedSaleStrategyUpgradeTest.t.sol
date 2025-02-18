@@ -299,8 +299,8 @@ contract ZoraTimedSaleStrategyUpgradeTest is BaseTest {
 
         // we are testing for these expected liquidity ratios: it should be 0.0000111 eth per 1 erc20
         uint256 expectedEthLiquidity = 0.0000111 ether * tokensMinted;
-        // should have one erc20 per 0.000111 eth
-        uint256 expectedErc20Liquidity = (expectedEthLiquidity * ONE_ERC20) / 0.000111 ether;
+        // should have one erc20 per 0.000000111 eth
+        uint256 expectedErc20Liquidity = (expectedEthLiquidity * ONE_ERC20) / 0.000000111 ether;
 
         address tokenAddress = saleStrategy.sale(address(collection), tokenId).erc20zAddress;
 
@@ -394,7 +394,7 @@ contract ZoraTimedSaleStrategyUpgradeTest is BaseTest {
 
         vm.deal(users.collector, 10 ether);
         vm.prank(users.collector);
-        saleStrategy.mint{value: 0.000111 ether}(users.collector, 1, address(collection), tokenId, users.mintReferral, "");
+        saleStrategy.mint{value: 0.000000111 ether}(users.collector, 1, address(collection), tokenId, users.mintReferral, "");
 
         vm.expectRevert(abi.encodeWithSignature("SaleInProgress()"));
         saleStrategy.launchMarket(address(collection), tokenId);

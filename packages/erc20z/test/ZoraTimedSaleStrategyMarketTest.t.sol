@@ -80,7 +80,7 @@ contract ZoraTimedSaleStrategyMarketTest is BaseTest {
         assertEq(currentSqrtPriceX96, 9994949499494123123123123123123);
 
         // Mint 110 tokens
-        saleStrategy.mint{value: 0.000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
+        saleStrategy.mint{value: 0.000000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
 
         vm.warp(block.timestamp + 30 hours);
 
@@ -134,7 +134,7 @@ contract ZoraTimedSaleStrategyMarketTest is BaseTest {
         assertEq(currentSqrtPriceX96, 752000439391924042743229815193600000);
 
         // mint 110 tokens
-        saleStrategy.mint{value: 0.000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
+        saleStrategy.mint{value: 0.000000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
 
         vm.warp(block.timestamp + 30 hours);
 
@@ -181,7 +181,7 @@ contract ZoraTimedSaleStrategyMarketTest is BaseTest {
         IUniswapV3Pool(poolAddress).swap(address(this), true, 100000, 123423123123, bytes(""));
 
         // mint 100 tokens
-        saleStrategy.mint{value: 0.000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
+        saleStrategy.mint{value: 0.000000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
 
         vm.warp(block.timestamp + 25 hours);
 
@@ -233,7 +233,7 @@ contract ZoraTimedSaleStrategyMarketTest is BaseTest {
         IUniswapV3Pool(poolAddress).swap(address(this), true, 100000, 123423123123, bytes(""));
 
         // mint 100 tokens
-        saleStrategy.mint{value: 0.000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
+        saleStrategy.mint{value: 0.000000111 ether * 110}(collector, 110, address(collection), tokenId, address(0), "");
 
         vm.warp(block.timestamp + 30 hours);
 
@@ -287,7 +287,7 @@ contract ZoraTimedSaleStrategyMarketTest is BaseTest {
         );
 
         // mint 100 tokens
-        saleStrategy.mint{value: 0.000111 ether * 100}(collector, 100, address(collection), tokenId, address(0), "");
+        saleStrategy.mint{value: 0.000000111 ether * 100}(collector, 100, address(collection), tokenId, address(0), "");
 
         vm.warp(block.timestamp + 30 hours);
 

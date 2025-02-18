@@ -29,7 +29,7 @@ pragma solidity ^0.8.23;
 /// @author @isabellasmallcombe @kulkarohan
 contract ZoraTimedSaleStrategyConstants {
     /// @notice The mint price for each token
-    uint256 internal constant MINT_PRICE = 0.000111 ether;
+    uint256 internal constant MINT_PRICE = 0.000000111 ether;
     /// @notice The creator reward
     uint256 internal constant CREATOR_REWARD = 0.0000555 ether;
     /// @notice The mint referrer reward
