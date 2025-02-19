@@ -8,16 +8,16 @@ library RewardSplitsLib {
     uint256 internal constant BPS_TO_PERCENT = 10_0000000;
     uint256 internal constant TOTAL_REWARD_PER_MINT_PCT = 10_0000000;
 
-    uint256 internal constant CREATOR_REWARD_PCT = 42_857100; // 42.8571%, roughly 0.000333 ETH at a 0.000777 value
-    uint256 internal constant FIRST_MINTER_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000111 ETH at a 0.000777 value
+    uint256 internal constant CREATOR_REWARD_PCT = 42_857100; // 42.8571%, roughly 0.000000333 ETH at a 0.000000777 value
+    uint256 internal constant FIRST_MINTER_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000000111 ETH at a 0.000000777 value
 
-    uint256 internal constant CREATE_REFERRAL_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000111 ETH at a 0.000777 value
-    uint256 internal constant MINT_REFERRAL_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000111 ETH at a 0.000777 value
-    uint256 internal constant ZORA_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000111 ETH at a 0.000777 value
+    uint256 internal constant CREATE_REFERRAL_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000000111 ETH at a 0.000000777 value
+    uint256 internal constant MINT_REFERRAL_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000000111 ETH at a 0.000000777 value
+    uint256 internal constant ZORA_FREE_MINT_REWARD_PCT = 14_228500; // 14.2285%, roughly 0.000000111 ETH at a 0.000000777 value
 
-    uint256 internal constant CREATE_REFERRAL_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000222 ETH at a 0.000777 value
-    uint256 internal constant MINT_REFERRAL_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000222 ETH at a 0.000777 value
-    uint256 internal constant ZORA_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000222 ETH at a 0.000777 value
+    uint256 internal constant CREATE_REFERRAL_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000000222 ETH at a 0.000000777 value
+    uint256 internal constant MINT_REFERRAL_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000000222 ETH at a 0.000000777 value
+    uint256 internal constant ZORA_PAID_MINT_REWARD_PCT = 28_571400; // 28.5714%, roughly 0.000000222 ETH at a 0.000000777 value
 
     function computeRewardsPct(uint256 totalReward, uint256 rewardPct) internal pure returns (uint256) {
         return (totalReward * rewardPct) / BPS_TO_PERCENT;

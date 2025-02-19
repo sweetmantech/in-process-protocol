@@ -27,14 +27,14 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
     function test1155FreeMintDeposit(uint256 numTokens) public {
         vm.assume(numTokens > 0 && numTokens < 100_000);
 
-        uint256 totalReward = mockERC1155.computeTotalReward(0.000777 ether, numTokens);
+        uint256 totalReward = mockERC1155.computeTotalReward(0.000000777 ether, numTokens);
 
         vm.deal(collector, totalReward);
 
         vm.prank(collector);
-        mockERC1155.mintWithRewards{value: totalReward}(collector, 0, numTokens, mintReferral, 0.000777 ether);
+        mockERC1155.mintWithRewards{value: totalReward}(collector, 0, numTokens, mintReferral, 0.000000777 ether);
 
-        IRewardSplits.RewardsSettings memory settings = computeFreeMintRewards(numTokens * 0.000777 ether);
+        IRewardSplits.RewardsSettings memory settings = computeFreeMintRewards(numTokens * 0.000000777 ether);
 
         assertEq(protocolRewards.totalSupply(), totalReward);
         assertEq(protocolRewards.balanceOf(creator), settings.creatorReward);
@@ -50,16 +50,16 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         mockERC1155.setSalePrice(pricePerToken);
 
-        uint256 totalReward = mockERC1155.computeTotalReward(0.000777 ether, numTokens);
+        uint256 totalReward = mockERC1155.computeTotalReward(0.000000777 ether, numTokens);
         uint256 totalSale = numTokens * pricePerToken;
         uint256 totalValue = totalReward + totalSale;
 
         vm.deal(collector, totalValue);
 
         vm.prank(collector);
-        mockERC1155.mintWithRewards{value: totalValue}(collector, 0, numTokens, mintReferral, 0.000777 ether);
+        mockERC1155.mintWithRewards{value: totalValue}(collector, 0, numTokens, mintReferral, 0.000000777 ether);
 
-        IRewardSplits.RewardsSettings memory settings = computePaidMintRewards(numTokens * 0.000777 ether);
+        IRewardSplits.RewardsSettings memory settings = computePaidMintRewards(numTokens * 0.000000777 ether);
 
         assertEq(protocolRewards.totalSupply(), totalReward);
         assertEq(protocolRewards.balanceOf(createReferral), settings.createReferralReward);
@@ -73,14 +73,14 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         mockERC1155 = new MockERC1155(creator, address(0), address(protocolRewards), zora);
 
-        uint256 totalReward = mockERC1155.computeTotalReward(0.000777 ether, numTokens);
+        uint256 totalReward = mockERC1155.computeTotalReward(0.000000777 ether, numTokens);
 
         vm.deal(collector, totalReward);
 
         vm.prank(collector);
-        mockERC1155.mintWithRewards{value: totalReward}(collector, 0, numTokens, address(0), 0.000777 ether);
+        mockERC1155.mintWithRewards{value: totalReward}(collector, 0, numTokens, address(0), 0.000000777 ether);
 
-        IRewardSplits.RewardsSettings memory settings = computeFreeMintRewards(numTokens * 0.000777 ether);
+        IRewardSplits.RewardsSettings memory settings = computeFreeMintRewards(numTokens * 0.000000777 ether);
 
         assertEq(protocolRewards.totalSupply(), totalReward);
         assertEq(protocolRewards.balanceOf(creator), settings.creatorReward);
@@ -96,16 +96,16 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         mockERC1155.setSalePrice(pricePerToken);
 
-        uint256 totalReward = mockERC1155.computeTotalReward(0.000777 ether, numTokens);
+        uint256 totalReward = mockERC1155.computeTotalReward(0.000000777 ether, numTokens);
         uint256 totalSale = numTokens * pricePerToken;
         uint256 totalValue = totalReward + totalSale;
 
         vm.deal(collector, totalValue);
 
         vm.prank(collector);
-        mockERC1155.mintWithRewards{value: totalValue}(collector, 0, numTokens, address(0), 0.000777 ether);
+        mockERC1155.mintWithRewards{value: totalValue}(collector, 0, numTokens, address(0), 0.000000777 ether);
 
-        IRewardSplits.RewardsSettings memory settings = computePaidMintRewards(numTokens * 0.000777 ether);
+        IRewardSplits.RewardsSettings memory settings = computePaidMintRewards(numTokens * 0.000000777 ether);
 
         assertEq(protocolRewards.totalSupply(), totalReward);
         assertEq(protocolRewards.balanceOf(collector), settings.firstMinterReward);
@@ -116,7 +116,7 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
         vm.assume(numTokens > 0 && numTokens < 100_000);
 
         vm.expectRevert(abi.encodeWithSignature("INVALID_ETH_AMOUNT()"));
-        mockERC1155.mintWithRewards(collector, 0, numTokens, mintReferral, 0.000777 ether);
+        mockERC1155.mintWithRewards(collector, 0, numTokens, mintReferral, 0.000000777 ether);
     }
 
     function testRevert1155PaidMintInvalidEth(uint256 numTokens, uint256 pricePerToken) public {
@@ -126,7 +126,7 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
         mockERC1155.setSalePrice(pricePerToken);
 
         vm.expectRevert(abi.encodeWithSignature("INVALID_ETH_AMOUNT()"));
-        mockERC1155.mintWithRewards(collector, 0, numTokens, mintReferral, 0.000777 ether);
+        mockERC1155.mintWithRewards(collector, 0, numTokens, mintReferral, 0.000000777 ether);
     }
 
     function testRevert1155PaidMintInvalidEthRemaining(uint256 numTokens, uint256 pricePerToken) public {
@@ -135,7 +135,7 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         mockERC1155.setSalePrice(pricePerToken);
 
-        uint256 totalReward = mockERC1155.computeTotalReward(0.000777 ether, numTokens);
+        uint256 totalReward = mockERC1155.computeTotalReward(0.000000777 ether, numTokens);
         uint256 totalSale = numTokens * pricePerToken;
         uint256 totalValue = totalReward + totalSale;
 
@@ -143,7 +143,7 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         vm.prank(collector);
         vm.expectRevert(abi.encodeWithSignature("MOCK_ERC1155_INVALID_REMAINING_VALUE()"));
-        mockERC1155.mintWithRewards{value: totalValue - 1}(collector, 0, numTokens, mintReferral, 0.000777 ether);
+        mockERC1155.mintWithRewards{value: totalValue - 1}(collector, 0, numTokens, mintReferral, 0.000000777 ether);
     }
 
     function testRemainderSentToZora(uint256 rewardPrice, uint256 numTokens) public {
@@ -198,8 +198,8 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
     }
 
     function testRewardCalculationIsCorrectFreeMint() public {
-        // assume that the reward price is 0.000777 ether and the number of tokens is 1
-        uint256 rewardPrice = 0.000777 ether;
+        // assume that the reward price is 0.000000777 ether and the number of tokens is 1
+        uint256 rewardPrice = 0.000000777 ether;
         uint256 numTokens = 1;
         uint256 totalReward = mockERC1155.computeTotalReward(rewardPrice, numTokens);
         uint256 totalValue = totalReward + numTokens;
@@ -209,12 +209,12 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
 
         IRewardSplits.RewardsSettings memory settings = computeFreeMintRewards(numTokens * rewardPrice);
 
-        assertApproxEqRel(settings.creatorReward, 0.000333 ether, 0.01e18);
-        assertApproxEqRel(settings.createReferralReward, 0.000111 ether, 0.01e18);
-        assertApproxEqRel(settings.mintReferralReward, 0.000111 ether, 0.01e18);
-        assertApproxEqRel(settings.firstMinterReward, 0.000111 ether, 0.01e18);
-        // ZoraReward will be greater than 0.000111 ether as it also includes the remainder
-        assertGe(settings.zoraReward, 0.000111 ether);
+        assertApproxEqRel(settings.creatorReward, 0.000000333 ether, 0.01e18);
+        assertApproxEqRel(settings.createReferralReward, 0.000000111 ether, 0.01e18);
+        assertApproxEqRel(settings.mintReferralReward, 0.000000111 ether, 0.01e18);
+        assertApproxEqRel(settings.firstMinterReward, 0.000000111 ether, 0.01e18);
+        // ZoraReward will be greater than 0.000000111 ether as it also includes the remainder
+        assertGe(settings.zoraReward, 0.000000111 ether);
     }
 
     function testRewardCalculationIsCorrectFreeMintFuzzy(uint256 numTokens, uint256 rewardPrice) public {
@@ -237,8 +237,8 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
     }
 
     function testRewardCalculationIsCorrectPaidMint() public {
-        // assume that the reward price is 0.000777 ether and the number of tokens is 1
-        uint256 rewardPrice = 0.000777 ether;
+        // assume that the reward price is 0.000000777 ether and the number of tokens is 1
+        uint256 rewardPrice = 0.000000777 ether;
         uint256 numTokens = 1;
         uint256 totalReward = mockERC1155.computeTotalReward(rewardPrice, numTokens);
         uint256 totalValue = totalReward + numTokens;
@@ -249,17 +249,17 @@ contract ERC1155RewardsTest is ProtocolRewardsTest {
         IRewardSplits.RewardsSettings memory settings = computePaidMintRewards(numTokens * rewardPrice);
 
         assertApproxEqRel(settings.creatorReward, 0 ether, 0.01e18);
-        assertApproxEqRel(settings.createReferralReward, 0.000222 ether, 0.01e18);
-        assertApproxEqRel(settings.mintReferralReward, 0.000222 ether, 0.01e18);
-        assertApproxEqRel(settings.firstMinterReward, 0.000111 ether, 0.01e18);
-        // ZoraReward will be greater than 0.000222 ether as it also includes the remainder
-        assertGe(settings.zoraReward, 0.000222 ether);
+        assertApproxEqRel(settings.createReferralReward, 0.000000222 ether, 0.01e18);
+        assertApproxEqRel(settings.mintReferralReward, 0.000000222 ether, 0.01e18);
+        assertApproxEqRel(settings.firstMinterReward, 0.000000111 ether, 0.01e18);
+        // ZoraReward will be greater than 0.000000222 ether as it also includes the remainder
+        assertGe(settings.zoraReward, 0.000000222 ether);
     }
 
     function testRewardCalculationIsCorrectPaidMintFuzzy(uint256 numTokens) public {
         vm.assume(numTokens > 0 && numTokens < 1_000_000);
 
-        uint256 rewardPrice = 0.000777 ether;
+        uint256 rewardPrice = 0.000000777 ether;
         uint256 totalReward = mockERC1155.computeTotalReward(rewardPrice, numTokens);
         uint256 totalValue = totalReward + numTokens;
 

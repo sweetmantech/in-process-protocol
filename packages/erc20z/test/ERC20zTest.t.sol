@@ -305,7 +305,7 @@ contract ERC20zTest is BaseTest {
 
         // invalid amount
         vm.expectRevert(IERC20Z.InvalidAmount20z.selector);
-        IERC20Z(erc20z).unwrap(0.000111 ether, users.collector);
+        IERC20Z(erc20z).unwrap(0.000000111 ether, users.collector);
     }
 
     function testERC20zConvert20zInvalid() public {

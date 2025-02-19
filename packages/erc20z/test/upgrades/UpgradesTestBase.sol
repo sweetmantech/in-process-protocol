@@ -117,7 +117,7 @@ contract UpgradesTestBase is ForkDeploymentConfig, Test, UpgradeBaseLib, Deploye
         );
 
         vm.prank(collector);
-        IZoraTimedSaleStrategy(erc20zSaleStrategy).mint{value: 0.000111 ether * 1000}(collector, 1000, address(newContract), newTokenId, address(0), "");
+        IZoraTimedSaleStrategy(erc20zSaleStrategy).mint{value: 0.000000111 ether * 1000}(collector, 1000, address(newContract), newTokenId, address(0), "");
 
         vm.warp(block.timestamp + 1120);
 

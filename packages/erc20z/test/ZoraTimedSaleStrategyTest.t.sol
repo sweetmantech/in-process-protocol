@@ -354,10 +354,10 @@ contract ZoraTimedSaleStrategyTest is BaseTest {
         // make sure that the eth deposited into the erc20 z matches the market reward
         assertEq(tokenAddress.balance, tokensMinted * 0.0000111 ether, "eth liquidity");
 
-        // there should be 0.000111 eth for each uint of erc20
+        // there should be 0.000000111 eth for each uint of erc20
         // so ratio looks like:
-        // 0.000111 eth / 1 erc20.  so if there is x balance in pool, there should be erc20: x / 0.000111
-        assertEq(activationCalculation.erc20Liquidity, (tokenAddress.balance * ONE_ERC20) / 0.000111 ether, "erc20 liquidity");
+        // 0.000000111 eth / 1 erc20.  so if there is x balance in pool, there should be erc20: x / 0.000000111
+        assertEq(activationCalculation.erc20Liquidity, (tokenAddress.balance * ONE_ERC20) / 0.000000111 ether, "erc20 liquidity");
         // make sure total 1155 supply and erc20 supply match
         assertEq(activationCalculation.finalTotalERC20ZSupply, activationCalculation.final1155Supply * ONE_ERC20, "total supply match");
         // make sure that erc20 liquidity to deposit is one per each 0.0000111 eth
@@ -388,8 +388,8 @@ contract ZoraTimedSaleStrategyTest is BaseTest {
 
     //     // we are testing for these expected liquidity ratios: it should be 0.0000111 eth per 1 erc20
     //     uint256 expectedEthLiquidity = 0.0000111 ether * tokensMinted;
-    //     // should have one erc20 per 0.000111 eth
-    //     uint256 expectedErc20Liquidity = (expectedEthLiquidity * ONE_ERC20) / 0.000111 ether;
+    //     // should have one erc20 per 0.000000111 eth
+    //     uint256 expectedErc20Liquidity = (expectedEthLiquidity * ONE_ERC20) / 0.000000111 ether;
 
     //     address tokenAddress = saleStrategy.sale(address(collection), tokenId).erc20zAddress;
 

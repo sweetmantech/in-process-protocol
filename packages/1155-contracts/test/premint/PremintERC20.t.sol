@@ -49,7 +49,7 @@ contract PremintERC20Test is Test {
         collector = makeAddr("collector");
         zora = makeAddr("zora");
         owner = makeAddr("owner");
-        ethReward = 0.000111 ether;
+        ethReward = 0.000000111 ether;
 
         mockErc20 = new ERC20PresetMinterPauser("Mock", "MOCK");
         erc20Minter = new ERC20Minter();

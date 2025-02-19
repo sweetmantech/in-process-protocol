@@ -44,7 +44,7 @@ contract BaseTest is Test {
     address internal constant PROTOCOL_REWARDS = 0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B;
     address internal constant ZORA_1155_FACTORY = 0x777777C338d93e2C7adf08D102d45CA7CC4Ed021;
 
-    uint256 internal constant mintFee = 0.000111 ether;
+    uint256 internal constant mintFee = 0.000000111 ether;
     uint256 internal constant royaltyFeeBps = 2500;
     uint256 constant ONE_ERC20 = 1e18;
 

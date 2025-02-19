@@ -6,7 +6,7 @@ import {RewardSplits, RewardSplitsLib} from "../RewardSplits.sol";
 /// @notice The base logic for handling Zora ERC-721 protocol rewards
 /// @dev Used in https://github.com/ourzora/zora-drops-contracts/blob/main/src/ERC721Drop.sol
 abstract contract ERC721Rewards is RewardSplits {
-    uint256 internal constant TOTAL_REWARD_PER_MINT_LEGACY = 0.000777 ether;
+    uint256 internal constant TOTAL_REWARD_PER_MINT_LEGACY = 0.000000777 ether;
 
     constructor(address _protocolRewards, address _zoraRewardRecipient) payable RewardSplits(_protocolRewards, _zoraRewardRecipient) {}
 

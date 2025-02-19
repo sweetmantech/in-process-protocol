@@ -55,7 +55,7 @@ contract ZoraCreator1155PreminterTest is Test {
     ZoraCreator1155FactoryImpl factory;
 
     ICreatorRoyaltiesControl.RoyaltyConfiguration internal defaultRoyaltyConfig;
-    uint256 internal mintFeeAmount = 0.000111 ether;
+    uint256 internal mintFeeAmount = 0.000000111 ether;
 
     // setup contract config
     uint256 internal creatorPrivateKey;

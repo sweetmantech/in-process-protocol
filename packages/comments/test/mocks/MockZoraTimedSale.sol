@@ -10,7 +10,7 @@ contract MockERC20z is ERC20 {
 }
 
 contract MockZoraTimedSale is IZoraTimedSaleStrategy {
-    uint256 constant MINT_FEE = 0.000111 ether;
+    uint256 constant MINT_FEE = 0.000000111 ether;
 
     function mint(address mintTo, uint256 quantity, address collection, uint256 tokenId, address, string calldata) external payable {
         if (msg.value != MINT_FEE * quantity) revert("Incorrect mint fee");
