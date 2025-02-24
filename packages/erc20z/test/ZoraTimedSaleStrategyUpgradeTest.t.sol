@@ -297,8 +297,8 @@ contract ZoraTimedSaleStrategyUpgradeTest is BaseTest {
         vm.prank(users.creator);
         collection.adminMint(users.creator, tokensMintedInOtherMinter, tokenId, "");
 
-        // we are testing for these expected liquidity ratios: it should be 0.0000111 eth per 1 erc20
-        uint256 expectedEthLiquidity = 0.0000111 ether * tokensMinted;
+        // we are testing for these expected liquidity ratios: it should be 0.0000000111 eth per 1 erc20
+        uint256 expectedEthLiquidity = 0.0000000111 ether * tokensMinted;
         // should have one erc20 per 0.000000111 eth
         uint256 expectedErc20Liquidity = (expectedEthLiquidity * ONE_ERC20) / 0.000000111 ether;
 
