@@ -10,94 +10,54 @@ import {INonfungiblePositionManager} from "../src/interfaces/uniswap/INonfungibl
 import {ERC20Z} from "../src/ERC20Z.sol";
 import {ZoraTimedSaleStrategyImpl} from "../src/minter/ZoraTimedSaleStrategyImpl.sol";
 import {Royalties} from "../src/royalties/Royalties.sol";
-import {DeterministicDeployerAndCaller, DeterministicContractConfig} from "@zoralabs/shared-contracts/deployment/ProxyDeployerScript.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {DeployerBase} from "./DeployerBase.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-/// @notice Deploy full erc20z protocol
-contract DeployScript is DeployerBase {
+contract DeployScript is Script {
+    // Base Sepolia addresses
+    address constant PROTOCOL_REWARDS = 0x7777777722D078c97c6AD07d9f36801E653e356A;
+    address constant WETH = 0x4200000000000000000000000000000000000006;
+    address constant NFT_POSITION_MANAGER = 0x46A15B0b27311cedF172AB29E4f4766fbE7F4364;
+    address constant ZORA_RECIPIENT = 0x51027631B9DEF86e088C33368eC4E3A4BE0aD264;
+
     function run() public {
-        IProtocolRewards protocolRewards = IProtocolRewards(PROTOCOL_REWARDS);
-        address owner = getProxyAdmin();
-        address zoraRecipient = getZoraRecipient();
-
-        DeploymentConfig memory config = readDeployment();
-
         vm.startBroadcast();
-        // deploy impl
-        ZoraTimedSaleStrategyImpl impl = new ZoraTimedSaleStrategyImpl();
 
-        address zoraTimedSaleStrategyImplAddress = address(impl);
-
-        // get deployer contract
-        DeterministicDeployerAndCaller deployer = createOrGetDeployerAndCaller();
-
-        // read previously saved deterministic royalties config
-        DeterministicContractConfig memory royaltiesConfig = readDeterministicContractConfig("royalties");
-
-        // read weth and nonfungible position manager from chain config
-        IWETH weth = IWETH(getWeth());
-        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(getNonFungiblePositionManager());
-
-        // build royalties init call
-        // royalties.initialize(weth, nonfungiblePositionManager);
-        bytes memory royaltiesInit = abi.encodeWithSelector(Royalties.initialize.selector, weth, nonfungiblePositionManager, zoraRecipient, 2500);
-
-        // sign royalties deployment with turnkey account
-        bytes memory royaltiesSignature = signDeploymentWithTurnkey(royaltiesConfig, royaltiesInit, deployer);
-
-        // deterministically deploy royalties contract using the signature
-        address deployedRoyalties = deployer.permitSafeCreate2AndCall(
-            royaltiesSignature,
-            royaltiesConfig.salt,
-            royaltiesConfig.creationCode,
-            royaltiesInit,
-            royaltiesConfig.deployedAddress
+        // Deploy Royalties contract
+        Royalties royalties = new Royalties();
+        royalties.initialize(
+            IWETH(WETH),
+            INonfungiblePositionManager(NFT_POSITION_MANAGER),
+            payable(ZORA_RECIPIENT),
+            2500
         );
 
-        Royalties royalties = Royalties(payable(deployedRoyalties));
-
-        // create erc20z
+        // Deploy ERC20Z
         ERC20Z erc20z = new ERC20Z(royalties);
 
-        // build initialization call for zora timed sale strategy
-        bytes memory zoraTimedSaleStrategyInit = abi.encodeWithSelector(
+        // Deploy TimedSale implementation
+        ZoraTimedSaleStrategyImpl impl = new ZoraTimedSaleStrategyImpl();
+
+        // Prepare initialization data
+        bytes memory initData = abi.encodeWithSelector(
             ZoraTimedSaleStrategyImpl.initialize.selector,
-            owner,
-            zoraRecipient,
-            erc20z,
-            protocolRewards
+            msg.sender, // owner
+            ZORA_RECIPIENT,
+            address(erc20z),
+            IProtocolRewards(PROTOCOL_REWARDS)
         );
 
-        // build upgrade to and call for timed sale strategy, with init call
-        // defined above
-        bytes memory upgradeToAndCall = abi.encodeWithSelector(
-            UUPSUpgradeable.upgradeToAndCall.selector,
-            zoraTimedSaleStrategyImplAddress,
-            zoraTimedSaleStrategyInit
+        // Deploy proxy using TransparentUpgradeableProxy instead of ERC1967Proxy
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(impl),    // implementation
+            msg.sender,       // admin
+            initData         // initialization call data
         );
-
-        // get previously generated deterministic deployment config for zora timed sale strategy
-        DeterministicContractConfig memory minterConfig = readDeterministicContractConfig("zoraTimedSaleStrategy");
-
-        // sign the deployment with the turnkey account
-        bytes memory minterSignature = signDeploymentWithTurnkey(minterConfig, upgradeToAndCall, deployer);
-
-        // deploy the zora timed sale strategy
-        deployer.permitSafeCreate2AndCall(minterSignature, minterConfig.salt, minterConfig.creationCode, upgradeToAndCall, minterConfig.deployedAddress);
 
         vm.stopBroadcast();
 
-        // update the deployment config with the new addresses
-        config.saleStrategy = minterConfig.deployedAddress;
-        config.saleStrategyImpl = address(impl);
-        config.saleStrategyImplVersion = impl.contractVersion();
-        config.erc20z = address(erc20z);
-        config.royalties = deployedRoyalties;
-        config.nonfungiblePositionManager = address(nonfungiblePositionManager);
-        config.weth = address(weth);
-
-        // save the deployment json
-        saveDeployment(config);
+        console.log("Royalties deployed to:", address(royalties));
+        console.log("ERC20Z deployed to:", address(erc20z));
+        console.log("TimedSale Implementation deployed to:", address(impl));
+        console.log("TimedSale Proxy deployed to:", address(proxy));
     }
 }
