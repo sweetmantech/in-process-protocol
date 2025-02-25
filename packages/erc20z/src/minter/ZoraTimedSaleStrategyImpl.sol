@@ -92,14 +92,14 @@ contract ZoraTimedSaleStrategyImpl is
 
     /// @notice This is deprecated and used for short-term backwards compatibility, use `setSaleV2()` instead.
     ///         This creates a V2 sale under the hood and ignores the passed `saleEnd` field.
-    ///         Defaults for the V2 sale: `marketCountdown` = 24 hours & `minimumMarketEth` = 0.00111 ETH (100 mints).
+    ///         Defaults for the V2 sale: `marketCountdown` = 24 hours & `minimumMarketEth` = 0.00000111 ETH (100 mints).
     /// @param tokenId The collection token id to set the sale config for
     /// @param salesConfig The sale config to set
     function setSale(uint256 tokenId, SalesConfig calldata salesConfig) external {
         // The defaults if this function is called when V2 is live.
         // Keeping these in local scope since they're only applicable here.
         uint64 defaultMarketCountdownForV1Sale = 24 hours;
-        uint256 defaultMinimumMarketEthForV1Sale = 0.00111 ether; // 100 mints * MARKET_REWARD
+        uint256 defaultMinimumMarketEthForV1Sale = 0.00000111 ether; // 100 mints * MARKET_REWARD
 
         SalesConfigV2 memory salesConfigV2 = SalesConfigV2({
             saleStart: salesConfig.saleStart,
