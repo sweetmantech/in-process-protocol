@@ -138,7 +138,7 @@ contract Zora1155PremintExecutorProxyTest is Test, IHasContractName {
     //     // create 1155 contract via premint, using legacy interface
     //     uint256 quantityToMint = 1;
 
-    //     uint256 mintFeeAmount = 0.000777 ether;
+    //     uint256 mintFeeAmount = 0.000000777 ether;
 
     //     vm.deal(collector, mintFeeAmount);
     //     vm.prank(collector);
@@ -257,7 +257,7 @@ contract Zora1155PremintExecutorProxyTest is Test, IHasContractName {
 
         // have mint referral withdraw - it should pass
         vm.prank(mintReferral);
-        IProtocolRewards(0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B).withdraw(mintReferral, 0.000111 ether * quantityToMint);
+        IProtocolRewards(0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B).withdraw(mintReferral, 0.000000111 ether * quantityToMint);
     }
 
     function test_premintV2_canWorkWithOldInterface() external {

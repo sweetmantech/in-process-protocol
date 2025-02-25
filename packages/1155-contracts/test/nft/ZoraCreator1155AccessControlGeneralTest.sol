@@ -22,7 +22,7 @@ contract ZoraCreator1155AccessControlGeneralTest is Test {
     address payable admin;
     address internal zora;
     uint256 initialTokenId = 777;
-    uint256 initialTokenPrice = 0.000777 ether;
+    uint256 initialTokenPrice = 0.000000777 ether;
 
     function setUp() external {
         zora = makeAddr("zora");

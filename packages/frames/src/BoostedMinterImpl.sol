@@ -7,7 +7,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {BoostedMinterStorageV1} from "./BoostedMinterStorageV1.sol";
 
 contract BoostedMinterImpl is BoostedMinterStorageV1, ReentrancyGuard, Initializable {
-    uint256 public immutable FIXED_GAS_PREMIUM = 0.000333 ether;
+    uint256 public immutable FIXED_GAS_PREMIUM = 0.000000333 ether;
     uint256 private constant CREATOR_ADMIN_ROLE_PERMISSION_BIT = 2;
 
     error ONLY_FRAME_MINTER();

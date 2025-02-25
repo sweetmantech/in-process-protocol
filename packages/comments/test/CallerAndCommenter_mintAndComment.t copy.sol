@@ -8,7 +8,7 @@ import {CallerAndCommenterTestBase} from "./CallerAndCommenterTestBase.sol";
 contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
     function testCanTimedSaleMintAndComment() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
@@ -55,7 +55,7 @@ contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
 
     function testWhenNoCommentDoesNotComment() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         vm.deal(commenter, mintFee * quantityToMint);
         vm.prank(commenter);
@@ -76,7 +76,7 @@ contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
 
     function testPermitTimedSaleMintAndComment() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
@@ -120,7 +120,7 @@ contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
 
     function testPermitTimedSaleMintAndComment_ExpiredDeadline() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         ICallerAndCommenter.PermitTimedSaleMintAndComment memory permit = _createPermit(
             commenter,
@@ -141,7 +141,7 @@ contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
 
     function testPermitTimedSaleMintAndComment_InvalidSignature() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         ICallerAndCommenter.PermitTimedSaleMintAndComment memory permit = _createPermit(
             commenter,
@@ -162,7 +162,7 @@ contract CallerAndCommenterMintAndCommentTest is CallerAndCommenterTestBase {
 
     function testPermitTimedSaleMintAndComment_IncorrectDestinationChain() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         ICallerAndCommenter.PermitTimedSaleMintAndComment memory permit = _createPermit(
             commenter,

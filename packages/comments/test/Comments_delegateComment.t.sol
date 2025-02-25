@@ -59,7 +59,7 @@ contract Comments_mintAndCommentTest is Test {
 
     function testCanDelegateCommentWithSparks() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
@@ -103,7 +103,7 @@ contract Comments_mintAndCommentTest is Test {
 
     function testDelegateCommentRevertsWhenMoreThanOneSpark() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
+        uint256 mintFee = 0.000000111 ether;
 
         uint256 sparksQuantity = 2;
         vm.deal(commenter, mintFee * quantityToMint + SPARKS_VALUE * sparksQuantity);

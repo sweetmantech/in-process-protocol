@@ -6,7 +6,7 @@ import {Mock1155} from "./Mock1155.sol";
 
 contract MockDelegateCommenter {
     IComments immutable comments;
-    uint256 MINT_FEE = 0.000111 ether;
+    uint256 MINT_FEE = 0.000000111 ether;
     uint256 constant SPARKS_VALUE = 0.000001 ether;
 
     constructor(address _comments) {
