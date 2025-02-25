@@ -14,7 +14,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 contract DeployScript is Script {
     // Base Sepolia addresses
-    address constant PROTOCOL_REWARDS = 0x7777777722D078c97c6AD07d9f36801E653e356A;
+    address constant PROTOCOL_REWARDS = 0x8d5dB12eAd1f8A9Ab88dD1e77a35194D5ff41CdF;
     address constant WETH = 0x4200000000000000000000000000000000000006;
     address constant NFT_POSITION_MANAGER = 0x46A15B0b27311cedF172AB29E4f4766fbE7F4364;
     address constant ZORA_RECIPIENT = 0x51027631B9DEF86e088C33368eC4E3A4BE0aD264;
