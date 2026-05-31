@@ -47,3 +47,6 @@ package/chainConfigs.ts
 
 # misc
 instructions.md
+
+# agent
+.claude/
