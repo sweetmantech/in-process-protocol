@@ -48,13 +48,31 @@ contract Comments_smartWallet is CommentsTestBase {
             expectedCommentIdentifier,
             0,
             emptyCommentIdentifier,
-            1,
+            0,
             "test comment",
             block.timestamp,
             address(0)
         );
         vm.prank(collectorWithoutToken);
+        comments.comment({
+            commenter: collectorWithoutToken,
+            contractAddress: address(mock1155),
+            tokenId: tokenId1,
+            text: "test comment",
+            replyTo: emptyCommentIdentifier,
+            commenterSmartWallet: smartWallet,
+            referrer: address(0)
+        });
+    }
+
+    function test_commentWithSmartWalletOwner_revertsWhenPaymentSent() public {
+        address smartWallet = address(new MockMultiOwnable(address(collectorWithoutToken)));
+
+        mock1155.mint(smartWallet, tokenId1, 1, "");
+
+        vm.prank(collectorWithoutToken);
         vm.deal(collectorWithoutToken, SPARKS_VALUE);
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, SPARKS_VALUE));
         comments.comment{value: SPARKS_VALUE}({
             commenter: collectorWithoutToken,
             contractAddress: address(mock1155),
@@ -97,8 +115,7 @@ contract Comments_smartWallet is CommentsTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(IComments.NotTokenHolderOrAdmin.selector));
         vm.prank(collectorWithoutToken);
-        vm.deal(collectorWithoutToken, SPARKS_VALUE);
-        comments.comment{value: SPARKS_VALUE}({
+        comments.comment({
             commenter: collectorWithoutToken,
             contractAddress: address(mock1155),
             tokenId: tokenId1,
@@ -118,8 +135,7 @@ contract Comments_smartWallet is CommentsTestBase {
 
         vm.expectRevert(IComments.NotSmartWalletOwner.selector);
         vm.prank(collectorWithoutToken);
-        vm.deal(collectorWithoutToken, SPARKS_VALUE);
-        comments.comment{value: SPARKS_VALUE}({
+        comments.comment({
             commenter: collectorWithoutToken,
             contractAddress: address(mock1155),
             tokenId: tokenId1,

@@ -11,12 +11,12 @@ contract CommentsImplConstants {
     bytes32 public constant DELEGATE_COMMENTER = keccak256("DELEGATE_COMMENTER");
     /// @notice permission bit for admin
     uint256 public constant PERMISSION_BIT_ADMIN = 2 ** 1;
-    /// @notice Zora reward percentage
-    uint256 public constant ZORA_REWARD_PCT = 10;
-    /// @notice referrer reward percentage
-    uint256 public constant REFERRER_REWARD_PCT = 20;
-    /// @notice Zora reward percentage when there is no referrer
-    uint256 public constant ZORA_REWARD_NO_REFERRER_PCT = 30;
+    /// @notice In Process fork: no protocol fee on spark transfers
+    uint256 public constant ZORA_REWARD_PCT = 0;
+    /// @notice In Process fork: no referrer reward on spark transfers
+    uint256 public constant REFERRER_REWARD_PCT = 0;
+    /// @notice In Process fork: no protocol fee when there is no referrer
+    uint256 public constant ZORA_REWARD_NO_REFERRER_PCT = 0;
     /// @notice BPS to percent conversion
     uint256 internal constant BPS_TO_PERCENT_2_DECIMAL_PERCISION = 100;
     /// @notice domain name for comments

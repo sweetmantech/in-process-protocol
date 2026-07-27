@@ -12,15 +12,10 @@ import {CommentsImpl} from "../src/CommentsImpl.sol";
 import {Comments} from "../src/proxy/Comments.sol";
 
 contract CommentsTest is CommentsTestBase {
-    uint256 public constant ZORA_REWARD_PCT = 10;
-    uint256 public constant REFERRER_REWARD_PCT = 20;
-    uint256 internal constant BPS_TO_PERCENT_2_DECIMAL_PERCISION = 100;
-
-    function _setupCommenterWithTokenAndSparks(address commenter, uint256 sparksQuantity) internal {
+    function _setupCommenterWithToken(address commenter) internal {
         vm.startPrank(commenter);
         mock1155.mint(commenter, tokenId1, 1, "");
         vm.stopPrank();
-        vm.deal(commenter, sparksQuantity * SPARKS_VALUE);
     }
 
     function _createCommentIdentifier(address commenter, bytes32 nonce) internal view returns (IComments.CommentIdentifier memory) {
@@ -28,15 +23,11 @@ contract CommentsTest is CommentsTestBase {
     }
 
     function testCommentContractName() public view {
-        assertEq(comments.contractName(), "Zora Comments");
+        assertEq(comments.contractName(), "In Process Comments");
     }
 
     function testCommentWhenCollectorHasTokenShouldEmitCommented() public {
-        vm.startPrank(collectorWithToken);
-        mock1155.mint(collectorWithToken, tokenId1, 1, "");
-        vm.stopPrank();
-
-        vm.deal(collectorWithToken, SPARKS_VALUE);
+        _setupCommenterWithToken(collectorWithToken);
 
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
@@ -44,7 +35,6 @@ contract CommentsTest is CommentsTestBase {
 
         IComments.CommentIdentifier memory expectedCommentIdentifier = _expectedCommentIdentifier(contractAddress, tokenId, commenter);
 
-        // blank replyTo
         IComments.CommentIdentifier memory replyTo;
 
         vm.expectEmit(true, true, true, true);
@@ -53,18 +43,17 @@ contract CommentsTest is CommentsTestBase {
             expectedCommentIdentifier,
             0,
             replyTo,
-            1,
+            0,
             "test comment",
             block.timestamp,
             address(0)
         );
         vm.prank(collectorWithToken);
-        comments.comment{value: SPARKS_VALUE}(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
+        comments.comment(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
 
-        uint256 zoraReward = (SPARKS_VALUE * (ZORA_REWARD_PCT + REFERRER_REWARD_PCT)) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
         vm.assertEq(protocolRewards.balanceOf(collectorWithToken), 0);
-        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), zoraReward);
-        vm.assertEq(protocolRewards.balanceOf(tokenAdmin), SPARKS_VALUE - zoraReward);
+        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), 0);
+        vm.assertEq(protocolRewards.balanceOf(tokenAdmin), 0);
     }
 
     function testCommentBackfillBatchAddCommentShouldEmitCommented() public {
@@ -98,7 +87,6 @@ contract CommentsTest is CommentsTestBase {
         originalTransactionHashes[1] = bytes32("2");
 
         vm.expectEmit(true, true, true, true);
-        // verify first comment is emitted
         emit IComments.BackfilledComment({
             commentId: comments.hashCommentIdentifier(commentIdentifiers[0]),
             commentIdentifier: commentIdentifiers[0],
@@ -107,7 +95,6 @@ contract CommentsTest is CommentsTestBase {
             originalTransactionId: originalTransactionHashes[0]
         });
         vm.expectEmit(true, true, true, true);
-        // verify second comment is emitted
         emit IComments.BackfilledComment({
             commentId: comments.hashCommentIdentifier(commentIdentifiers[1]),
             commentIdentifier: commentIdentifiers[1],
@@ -153,7 +140,6 @@ contract CommentsTest is CommentsTestBase {
         vm.prank(commentsBackfiller);
         comments.backfillBatchAddComment(commentIdentifiers, texts, timestamps, originalTransactionHashes);
 
-        // ensure that when backfilling a duplicate, it reverts
         vm.expectRevert(abi.encodeWithSelector(IComments.DuplicateComment.selector, comments.hashCommentIdentifier(commentIdentifiers[0])));
         vm.prank(commentsBackfiller);
         comments.backfillBatchAddComment(commentIdentifiers, texts, timestamps, originalTransactionHashes);
@@ -165,7 +151,7 @@ contract CommentsTest is CommentsTestBase {
 
         string[] memory texts = new string[](2);
 
-        uint256[] memory timestamps = new uint256[](1); // Mismatched length
+        uint256[] memory timestamps = new uint256[](1);
 
         bytes32[] memory originalTransactionHashes = new bytes32[](2);
 
@@ -185,28 +171,22 @@ contract CommentsTest is CommentsTestBase {
         comments.sparkComment(commentIdentifier, 0, address(0));
     }
 
-    function testCommentSparkCommentWithInvalidAmount() public {
-        IComments.CommentIdentifier memory commentIdentifier = IComments.CommentIdentifier({
-            commenter: collectorWithToken,
-            contractAddress: address(mock1155),
-            tokenId: tokenId1,
-            nonce: bytes32(0)
-        });
-        vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectETHAmountForSparks.selector, 0, SPARKS_VALUE));
-        comments.sparkComment{value: 0}(commentIdentifier, 1, address(0));
-    }
-
-    function testCommentSparkCommentOwnComment() public {
-        // comment
+    function testCommentSparkCommentRevertsWhenPaymentSent() public {
         IComments.CommentIdentifier memory replyTo;
         IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
 
-        // spark own comment
-        vm.deal(collectorWithToken, SPARKS_VALUE);
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, SPARKS_VALUE));
+        vm.prank(sparker);
+        comments.sparkComment{value: SPARKS_VALUE}(commentIdentifier, 1, address(0));
+    }
+
+    function testCommentSparkCommentOwnComment() public {
+        IComments.CommentIdentifier memory replyTo;
+        IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
 
         vm.expectRevert(abi.encodeWithSignature("CannotSparkOwnComment()"));
         vm.prank(collectorWithToken);
-        comments.sparkComment{value: SPARKS_VALUE}(commentIdentifier, 1, address(0));
+        comments.sparkComment(commentIdentifier, 1, address(0));
     }
 
     function testCommentSparkCommentDoesNotExist() public {
@@ -217,23 +197,16 @@ contract CommentsTest is CommentsTestBase {
             nonce: keccak256("123456")
         });
         vm.expectRevert(abi.encodeWithSignature("CommentDoesntExist()"));
-        comments.sparkComment{value: SPARKS_VALUE}(commentIdentifier, 1, address(0));
+        comments.sparkComment(commentIdentifier, 1, address(0));
     }
 
     function testCommentSparkCommentValid(uint256 sparksQuantity) public {
         vm.assume(sparksQuantity > 0 && sparksQuantity < 1_000_000_000_000_000);
 
-        // comment
         IComments.CommentIdentifier memory replyTo;
         IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
 
-        // mint
         address commenter2 = makeAddr("commenter2");
-
-        uint256 zoraRecipientBalanceBeforeSpark = protocolRewards.balanceOf(zoraRecipient);
-
-        // spark comment
-        vm.deal(commenter2, sparksQuantity * SPARKS_VALUE);
 
         vm.expectEmit(true, true, true, true);
         emit IComments.SparkedComment(
@@ -245,28 +218,20 @@ contract CommentsTest is CommentsTestBase {
             address(0)
         );
         vm.prank(commenter2);
-        comments.sparkComment{value: sparksQuantity * SPARKS_VALUE}(commentIdentifier, sparksQuantity, address(0));
+        comments.sparkComment(commentIdentifier, sparksQuantity, address(0));
 
-        uint256 zoraReward = (sparksQuantity * SPARKS_VALUE * (ZORA_REWARD_PCT + REFERRER_REWARD_PCT)) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        vm.assertEq(protocolRewards.balanceOf(zoraRecipient) - zoraRecipientBalanceBeforeSpark, zoraReward);
-        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), (sparksQuantity * SPARKS_VALUE) - zoraReward);
+        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), 0);
+        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), 0);
+        vm.assertEq(comments.commentSparksQuantity(commentIdentifier), sparksQuantity);
     }
 
     function testCommentSparkCommentValidWithReferrer(uint256 sparksQuantity) public {
         vm.assume(sparksQuantity > 0 && sparksQuantity < 1_000_000_000_000_000);
 
-        // comment
         IComments.CommentIdentifier memory replyTo;
         IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
 
-        // mint
         address commenter2 = makeAddr("commenter2");
-
-        uint256 zoraRecipientBalanceBeforeSpark = protocolRewards.balanceOf(zoraRecipient);
-
-        // spark comment
-        vm.deal(commenter2, sparksQuantity * SPARKS_VALUE);
-
         address referrer = makeAddr("referrer");
 
         vm.expectEmit(true, true, true, true);
@@ -279,13 +244,11 @@ contract CommentsTest is CommentsTestBase {
             referrer
         );
         vm.prank(commenter2);
-        comments.sparkComment{value: sparksQuantity * SPARKS_VALUE}(commentIdentifier, sparksQuantity, referrer);
+        comments.sparkComment(commentIdentifier, sparksQuantity, referrer);
 
-        uint256 zoraReward = (sparksQuantity * SPARKS_VALUE * ZORA_REWARD_PCT) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        uint256 referrerReward = (sparksQuantity * SPARKS_VALUE * REFERRER_REWARD_PCT) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        vm.assertEq(protocolRewards.balanceOf(zoraRecipient) - zoraRecipientBalanceBeforeSpark, zoraReward);
-        vm.assertEq(protocolRewards.balanceOf(referrer), referrerReward);
-        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), (sparksQuantity * SPARKS_VALUE) - zoraReward - referrerReward);
+        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), 0);
+        vm.assertEq(protocolRewards.balanceOf(referrer), 0);
+        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), 0);
     }
 
     function testCommentHashAndValidateCommentExists() public {
@@ -307,7 +270,7 @@ contract CommentsTest is CommentsTestBase {
         IComments.CommentIdentifier memory replyTo
     ) internal returns (IComments.CommentIdentifier memory) {
         vm.prank(commenter);
-        return comments.comment{value: SPARKS_VALUE}(commenter, contractAddress, tokenId, content, replyTo, address(0), address(0));
+        return comments.comment(commenter, contractAddress, tokenId, content, replyTo, address(0), address(0));
     }
 
     function testHashAndCheckCommentExists() public {
@@ -315,15 +278,12 @@ contract CommentsTest is CommentsTestBase {
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
 
-        // Check that the comment doesn't exist initially
         (bytes32 commentId, bool exists) = comments.hashAndCheckCommentExists(_expectedCommentIdentifier(contractAddress, tokenId, commenter));
         assertFalse(exists);
 
-        // Setup and post comment
-        _setupCommenterWithTokenAndSparks(commenter, 1);
+        _setupCommenterWithToken(commenter);
         IComments.CommentIdentifier memory postedCommentIdentifier = postComment(commenter, contractAddress, tokenId, "test comment", emptyCommentIdentifier);
 
-        // Check that the comment now exists
         (bytes32 newCommentId, bool newExists) = comments.hashAndCheckCommentExists(postedCommentIdentifier);
         assertTrue(newExists);
         assertEq(commentId, newCommentId);
@@ -332,7 +292,7 @@ contract CommentsTest is CommentsTestBase {
 
     function testReplyToNonExistentComment() public {
         address commenter = makeAddr("commenter");
-        _setupCommenterWithTokenAndSparks(commenter, 1);
+        _setupCommenterWithToken(commenter);
 
         IComments.CommentIdentifier memory nonExistentReplyTo = IComments.CommentIdentifier({
             commenter: makeAddr("nonExistentCommenter"),
@@ -349,8 +309,8 @@ contract CommentsTest is CommentsTestBase {
         address originalCommenter = makeAddr("originalCommenter");
         address replier = makeAddr("replier");
 
-        _setupCommenterWithTokenAndSparks(originalCommenter, 1);
-        _setupCommenterWithTokenAndSparks(replier, 1);
+        _setupCommenterWithToken(originalCommenter);
+        _setupCommenterWithToken(replier);
 
         IComments.CommentIdentifier memory originalCommentIdentifier = postComment(
             originalCommenter,
@@ -360,47 +320,29 @@ contract CommentsTest is CommentsTestBase {
             emptyCommentIdentifier
         );
 
-        // mismatched address
         address mismatchedAddress = makeAddr("xyz");
 
         vm.expectRevert(
             abi.encodeWithSelector(IComments.CommentAddressOrTokenIdsDoNotMatch.selector, mismatchedAddress, tokenId1, address(mock1155), tokenId1)
         );
         vm.prank(replier);
-        comments.comment{value: SPARKS_VALUE}(
-            replier,
-            mismatchedAddress,
-            tokenId1,
-            "Reply to original comment",
-            originalCommentIdentifier,
-            address(0),
-            address(0)
-        );
+        comments.comment(replier, mismatchedAddress, tokenId1, "Reply to original comment", originalCommentIdentifier, address(0), address(0));
 
-        // mismatched tokenId
         uint256 mismatchedTokenId = 123;
 
         vm.expectRevert(
             abi.encodeWithSelector(IComments.CommentAddressOrTokenIdsDoNotMatch.selector, address(mock1155), mismatchedTokenId, address(mock1155), tokenId1)
         );
         vm.prank(replier);
-        comments.comment{value: SPARKS_VALUE}(
-            replier,
-            address(mock1155),
-            mismatchedTokenId,
-            "Reply to original comment",
-            originalCommentIdentifier,
-            address(0),
-            address(0)
-        );
+        comments.comment(replier, address(mock1155), mismatchedTokenId, "Reply to original comment", originalCommentIdentifier, address(0), address(0));
     }
 
     function testReplyToExistingComment() public {
         address originalCommenter = makeAddr("originalCommenter");
         address replier = makeAddr("replier");
 
-        _setupCommenterWithTokenAndSparks(originalCommenter, 1);
-        _setupCommenterWithTokenAndSparks(replier, 1);
+        _setupCommenterWithToken(originalCommenter);
+        _setupCommenterWithToken(replier);
 
         IComments.CommentIdentifier memory originalCommentIdentifier = postComment(
             originalCommenter,
@@ -418,7 +360,7 @@ contract CommentsTest is CommentsTestBase {
             expectedReplyCommentIdentifier,
             comments.hashCommentIdentifier(originalCommentIdentifier),
             originalCommentIdentifier,
-            1,
+            0,
             "Reply to original comment",
             block.timestamp,
             address(0)
@@ -437,7 +379,7 @@ contract CommentsTest is CommentsTestBase {
         uint256 commenteeSparks = comments.commentSparksQuantity(originalCommentIdentifier);
         assertEq(commenteeSparks, 0, "commentee sparks should be 0");
 
-        assertEq(protocolRewards.balanceOf(originalCommenter), (SPARKS_VALUE * 70) / 100, "rewards mismatch");
+        assertEq(protocolRewards.balanceOf(originalCommenter), 0, "rewards mismatch");
 
         (, bool exists) = comments.hashAndCheckCommentExists(replyCommentIdentifier);
         assertTrue(exists);
@@ -447,24 +389,16 @@ contract CommentsTest is CommentsTestBase {
         address actualCommenter = makeAddr("actualCommenter");
         address mismatchedCommenter = makeAddr("mismatchedCommenter");
 
-        _setupCommenterWithTokenAndSparks(actualCommenter, 1);
+        _setupCommenterWithToken(actualCommenter);
 
         vm.expectRevert(abi.encodeWithSelector(IComments.CommenterMismatch.selector, mismatchedCommenter, actualCommenter));
         vm.prank(actualCommenter);
-        comments.comment{value: SPARKS_VALUE}(
-            mismatchedCommenter,
-            address(mock1155),
-            tokenId1,
-            "Mismatched commenter",
-            emptyCommentIdentifier,
-            address(0),
-            address(0)
-        );
+        comments.comment(mismatchedCommenter, address(mock1155), tokenId1, "Mismatched commenter", emptyCommentIdentifier, address(0), address(0));
     }
 
     function testRevertOnEmptyComment() public {
         address commenter = makeAddr("commenter");
-        _setupCommenterWithTokenAndSparks(commenter, 1);
+        _setupCommenterWithToken(commenter);
 
         vm.expectRevert(IComments.EmptyComment.selector);
         postComment(commenter, address(mock1155), tokenId1, "", emptyCommentIdentifier);
@@ -473,41 +407,28 @@ contract CommentsTest is CommentsTestBase {
     function testRevertOnNotTokenHolderOrAdmin() public {
         address nonHolder = makeAddr("nonHolder");
 
-        // We don't set up the commenter with a token, so they're neither a holder nor an admin
-        vm.deal(nonHolder, SPARKS_VALUE);
-
         vm.expectRevert(IComments.NotTokenHolderOrAdmin.selector);
         postComment(nonHolder, address(mock1155), tokenId1, "Attempting to comment without holding token", emptyCommentIdentifier);
     }
 
-    function testCommentRevertsWhenSendTooMuchValue() public {
+    function testCommentRevertsWhenPaymentSent() public {
         address tokenHolder = makeAddr("tokenHolder");
 
-        _setupCommenterWithTokenAndSparks(tokenHolder, 1);
+        _setupCommenterWithToken(tokenHolder);
 
         vm.deal(tokenHolder, 1 ether);
         vm.prank(tokenHolder);
-        vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectETHAmountForSparks.selector, 1 ether, SPARKS_VALUE));
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, 1 ether));
         comments.comment{value: 1 ether}(tokenHolder, address(mock1155), tokenId1, "test", emptyCommentIdentifier, address(0), address(0));
     }
 
-    function testCommentRevertsWhenSendTooLittleValue() public {
+    function testCommentSucceedsWithZeroValue() public {
         address tokenHolder = makeAddr("tokenHolder");
 
-        _setupCommenterWithTokenAndSparks(tokenHolder, 1);
+        _setupCommenterWithToken(tokenHolder);
 
         vm.prank(tokenHolder);
-        vm.expectRevert(abi.encodeWithSelector(IComments.MustSendAtLeastOneSpark.selector));
         comments.comment(tokenHolder, address(mock1155), tokenId1, "test", emptyCommentIdentifier, address(0), address(0));
-    }
-
-    function testCommentRevertsWhenSendExactValue() public {
-        address tokenHolder = makeAddr("tokenHolder");
-
-        _setupCommenterWithTokenAndSparks(tokenHolder, 1);
-
-        vm.prank(tokenHolder);
-        comments.comment{value: SPARKS_VALUE}(tokenHolder, address(mock1155), tokenId1, "test", emptyCommentIdentifier, address(0), address(0));
     }
 
     function testCommentWithMock1155NoCreatorRewardRecipient() public {
@@ -518,40 +439,13 @@ contract CommentsTest is CommentsTestBase {
         mock1155NoCreatorRewardRecipient.mint(collectorWithToken, tokenId1, 1, "");
         vm.stopPrank();
 
-        uint256 sparksQuantity = 1;
-
-        vm.deal(collectorWithToken, sparksQuantity * SPARKS_VALUE);
-
         address contractAddress = address(mock1155NoCreatorRewardRecipient);
         uint256 tokenId = tokenId1;
 
-        // blank replyTo
         IComments.CommentIdentifier memory replyTo;
 
-        // funds recipient is 0x000...
         vm.prank(collectorWithToken);
-        vm.expectRevert(abi.encodeWithSelector(IComments.NoFundsRecipient.selector));
-        comments.comment{value: sparksQuantity * SPARKS_VALUE}(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
-
-        // with funds recipient set
-        address newFundsRecipient = makeAddr("newFundsRecipient");
-        mock1155NoCreatorRewardRecipient.setFundsRecipient(payable(newFundsRecipient));
-        vm.deal(collectorWithToken, sparksQuantity * SPARKS_VALUE);
-
-        vm.prank(collectorWithToken);
-        comments.comment{value: sparksQuantity * SPARKS_VALUE}(
-            collectorWithToken,
-            contractAddress,
-            tokenId,
-            "test comment with recipient",
-            replyTo,
-            address(0),
-            address(0)
-        );
-
-        uint256 zoraReward = (sparksQuantity * SPARKS_VALUE * (ZORA_REWARD_PCT + REFERRER_REWARD_PCT)) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        uint256 recipientReward = (sparksQuantity * SPARKS_VALUE) - zoraReward;
-        vm.assertEq(protocolRewards.balanceOf(newFundsRecipient), recipientReward);
+        comments.comment(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
     }
 
     function testCommentWithMock1155NoOwner() public {
@@ -562,17 +456,13 @@ contract CommentsTest is CommentsTestBase {
         mock1155NoOwner.mint(collectorWithToken, tokenId1, 1, "");
         vm.stopPrank();
 
-        uint256 sparksQuantity = 1;
-        vm.deal(collectorWithToken, sparksQuantity * SPARKS_VALUE);
-
         address contractAddress = address(mock1155NoOwner);
         uint256 tokenId = tokenId1;
 
         IComments.CommentIdentifier memory replyTo;
 
         vm.prank(collectorWithToken);
-        vm.expectRevert(abi.encodeWithSelector(IComments.NoFundsRecipient.selector));
-        comments.comment{value: sparksQuantity * SPARKS_VALUE}(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
+        comments.comment(collectorWithToken, contractAddress, tokenId, "test comment", replyTo, address(0), address(0));
     }
 
     function testImplementation() public view {

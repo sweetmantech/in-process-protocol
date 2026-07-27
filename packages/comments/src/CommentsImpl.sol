@@ -140,8 +140,7 @@ contract CommentsImpl is
         }
     }
 
-    /// @notice Creates a new comment.  Equivalant sparks value in eth must be sent with the transaction.  Must be a holder or creator of the referenced 1155 token.
-    /// If not the owner, must send 1 spark.
+    /// @notice Creates a new comment. Must be a holder or creator of the referenced 1155 token. Free on In Process.
     /// @param contractAddress The address of the contract
     /// @param tokenId The token ID
     /// @param commenter The address of the commenter
@@ -159,7 +158,7 @@ contract CommentsImpl is
         address commenterSmartWallet,
         address referrer
     ) external payable returns (CommentIdentifier memory commentIdentifier) {
-        uint256 sparksQuantity = _getAndValidateSingleSparkQuantityFromValue(msg.value);
+        _rejectCommentPayment();
 
         commentIdentifier = _createCommentIdentifier(contractAddress, tokenId, commenter);
 
@@ -167,24 +166,18 @@ contract CommentsImpl is
             commenter: msg.sender,
             commentIdentifier: commentIdentifier,
             text: text,
-            sparksQuantity: sparksQuantity,
+            sparksQuantity: 0,
             replyTo: replyTo,
             commenterSmartWallet: commenterSmartWallet,
             referrer: referrer,
-            mustSendAtLeastOneSpark: true
+            mustSendAtLeastOneSpark: false
         });
     }
 
-    // gets the sparks quantity from the value sent with the transaction,
-    // ensuring that at most 1 spark is sent.
-    function _getAndValidateSingleSparkQuantityFromValue(uint256 value) internal view returns (uint256) {
-        if (value == 0) {
-            return 0;
+    function _rejectCommentPayment() internal view {
+        if (msg.value != 0) {
+            revert CommentPaymentNotAllowed(msg.value);
         }
-        if (value != sparkValue) {
-            revert IncorrectETHAmountForSparks(value, sparkValue);
-        }
-        return 1;
     }
 
     // Allows another contract to call this function to signify a caller commented, and is trusted
@@ -207,7 +200,7 @@ contract CommentsImpl is
         address commenterSmartWalletOwner,
         address referrer
     ) external payable onlyRole(DELEGATE_COMMENTER) returns (CommentIdentifier memory commentIdentifier, bytes32 commentId) {
-        uint256 sparksQuantity = _getAndValidateSingleSparkQuantityFromValue(msg.value);
+        _rejectCommentPayment();
 
         commentIdentifier = _createCommentIdentifier(contractAddress, tokenId, commenter);
 
@@ -215,7 +208,7 @@ contract CommentsImpl is
             commenter: commentIdentifier.commenter,
             commentIdentifier: commentIdentifier,
             text: text,
-            sparksQuantity: sparksQuantity,
+            sparksQuantity: 0,
             replyTo: replyTo,
             commenterSmartWallet: commenterSmartWalletOwner,
             referrer: referrer,
@@ -446,23 +439,16 @@ contract CommentsImpl is
         emit Commented(commentId, commentIdentifier, replyToId, replyToIdentifier, sparksQuantity, text, timestamp, referrer);
     }
 
-    /// @notice Sparks a comment.  Equivalant sparks value in eth to sparksQuantity must be sent with the transaction.  Sparking a comment is
-    /// similar to liking it, except it is liked with the value of sparks attached.  The spark value gets sent to the commenter, with a fee taken out.
+    /// @notice Sparks a comment. Free on In Process — no ETH is required or accepted.
     /// @param commentIdentifier The identifier of the comment to spark
-    /// @param sparksQuantity The quantity of sparks to send
+    /// @param sparksQuantity The quantity of sparks to record for this spark action
     /// @param referrer The referrer of the comment
     function sparkComment(CommentIdentifier calldata commentIdentifier, uint256 sparksQuantity, address referrer) public payable {
+        _rejectCommentPayment();
         if (sparksQuantity == 0) {
             revert MustSendAtLeastOneSpark();
         }
-        _validateSparksQuantityMatchesValue(sparksQuantity, msg.value);
         _sparkComment(commentIdentifier, msg.sender, sparksQuantity, referrer);
-    }
-
-    function _validateSparksQuantityMatchesValue(uint256 sparksQuantity, uint256 value) internal view {
-        if (value != sparksQuantity * sparkValue) {
-            revert IncorrectETHAmountForSparks(value, sparksQuantity * sparkValue);
-        }
     }
 
     function _sparkComment(CommentIdentifier memory commentIdentifier, address sparker, uint256 sparksQuantity, address referrer) internal {
@@ -475,8 +461,6 @@ contract CommentsImpl is
         }
 
         comments(commentId).totalSparks += uint256(sparksQuantity);
-
-        _transferSparksValueToRecipient(commentIdentifier.commenter, referrer, sparksQuantity * sparkValue, "Sparked Comment");
 
         emit SparkedComment(commentId, commentIdentifier, sparksQuantity, sparker, block.timestamp, referrer);
     }
@@ -536,23 +520,23 @@ contract CommentsImpl is
             revert IncorrectDestinationChain(permit.destinationChainId);
         }
 
+        _rejectCommentPayment();
+
         bytes32 digest = hashPermitComment(permit);
         _validatePermit(digest, permit.nonce, signature, permit.commenter, permit.deadline);
 
         CommentIdentifier memory commentIdentifier = _createCommentIdentifier(permit.contractAddress, permit.tokenId, permit.commenter);
 
-        uint256 sparksQuantity = _getAndValidateSingleSparkQuantityFromValue(msg.value);
-
         (bytes32 commentId, bytes32 replyToId) = _validateComment(
             commentIdentifier,
             permit.replyTo,
             permit.text,
-            sparksQuantity,
+            0,
             permit.commenterSmartWallet,
-            true
+            false
         );
 
-        _saveCommentAndTransferSparks(commentId, commentIdentifier, permit.text, sparksQuantity, replyToId, permit.replyTo, block.timestamp, permit.referrer);
+        _saveCommentAndTransferSparks(commentId, commentIdentifier, permit.text, 0, replyToId, permit.replyTo, block.timestamp, permit.referrer);
     }
 
     /// @notice Hashes a permit spark comment struct for signing
@@ -583,14 +567,14 @@ contract CommentsImpl is
             revert IncorrectDestinationChain(permit.destinationChainId);
         }
 
+        _rejectCommentPayment();
+
         bytes32 digest = hashPermitSparkComment(permit);
         _validatePermit(digest, permit.nonce, signature, permit.sparker, permit.deadline);
 
         if (permit.sparksQuantity == 0) {
             revert MustSendAtLeastOneSpark();
         }
-
-        _validateSparksQuantityMatchesValue(permit.sparksQuantity, msg.value);
 
         _sparkComment(permit.comment, permit.sparker, permit.sparksQuantity, permit.referrer);
     }
@@ -669,7 +653,7 @@ contract CommentsImpl is
     /// @notice Returns the name of the contract
     /// @return The name of the contract
     function contractName() public pure returns (string memory) {
-        return "Zora Comments";
+        return "In Process Comments";
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {

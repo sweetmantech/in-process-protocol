@@ -70,9 +70,7 @@ contract CommentsTestBase is Test {
         mock1155.mint(commenter, tokenId1, 1, "");
         vm.stopPrank();
 
-        vm.deal(commenter, SPARKS_VALUE);
-
         vm.prank(commenter);
-        commentIdentifier = comments.comment{value: SPARKS_VALUE}(commenter, address(mock1155), tokenId1, "comment", replyTo, address(0), address(0));
+        commentIdentifier = comments.comment(commenter, address(mock1155), tokenId1, "comment", replyTo, address(0), address(0));
     }
 }

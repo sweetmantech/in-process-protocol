@@ -13,18 +13,12 @@ contract Comments_mintAndCommentTest is Test {
     Mock1155 mock1155;
     CommentsImpl comments;
 
-    uint256 constant SPARKS_VALUE = 0.000001 ether;
-
     address zoraRecipient = makeAddr("zoraRecipient");
     address commentsAdmin = makeAddr("commentsAdmin");
     address commenter = makeAddr("commenter");
     address tokenAdmin = makeAddr("tokenAdmin");
     address backfiller = makeAddr("backfiller");
     address referrer = makeAddr("referrer");
-
-    uint256 internal constant ZORA_REWARD_PCT = 10;
-    uint256 internal constant REFERRER_REWARD_PCT = 20;
-    uint256 internal constant BPS_TO_PERCENT_2_DECIMAL_PERCISION = 100;
 
     uint256 tokenId1 = 1;
 
@@ -34,7 +28,7 @@ contract Comments_mintAndCommentTest is Test {
     function setUp() public {
         vm.createSelectFork("zora_sepolia", 14562731);
 
-        CommentsImpl commentsImpl = new CommentsImpl(SPARKS_VALUE, protocolRewards, zoraRecipient);
+        CommentsImpl commentsImpl = new CommentsImpl(0.000001 ether, protocolRewards, zoraRecipient);
 
         comments = CommentsImpl(payable(address(new Comments(address(commentsImpl)))));
 
@@ -57,9 +51,8 @@ contract Comments_mintAndCommentTest is Test {
         return IComments.CommentIdentifier({commenter: _commenter, contractAddress: contractAddress, tokenId: tokenId, nonce: comments.nextNonce()});
     }
 
-    function testCanDelegateCommentWithSparks() public {
+    function testCanDelegateCommentWithoutPayment() public {
         uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
 
         address contractAddress = address(mock1155);
         uint256 tokenId = tokenId1;
@@ -71,52 +64,42 @@ contract Comments_mintAndCommentTest is Test {
         bytes32 expectedCommentId = comments.hashCommentIdentifier(expectedCommentIdentifier);
         bytes32 expectedReplyToId = bytes32(0);
 
-        vm.deal(commenter, mintFee * quantityToMint + SPARKS_VALUE);
         vm.expectEmit(true, true, true, true);
         emit IComments.Commented(
             expectedCommentId,
             _expectedCommentIdentifier(commenter, contractAddress, tokenId),
             expectedReplyToId,
             emptyReplyTo,
-            1,
+            0,
             "test",
             block.timestamp,
             referrer
         );
         vm.prank(commenter);
-        mockDelegateCommenter.mintAndCommentWithSpark{value: SPARKS_VALUE + mintFee * quantityToMint}({
+        mockDelegateCommenter.mintAndComment({
+            quantity: quantityToMint,
+            collection: address(mock1155),
+            tokenId: tokenId1,
+            comment: "test",
+            referrer: referrer
+        });
+    }
+
+    function testDelegateCommentRevertsWhenPaymentSent() public {
+        uint256 quantityToMint = 1;
+        uint256 mintFee = 0.000111 ether;
+
+        vm.deal(commenter, mintFee * quantityToMint + 0.000001 ether);
+
+        vm.prank(commenter);
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, 0.000001 ether));
+        mockDelegateCommenter.mintAndCommentWithSpark{value: 0.000001 ether + mintFee * quantityToMint}({
             quantity: quantityToMint,
             collection: address(mock1155),
             tokenId: tokenId1,
             comment: "test",
             referrer: referrer,
             sparksQuantity: 1
-        });
-
-        // validate that the protocol creator received rewards
-        uint256 zoraReward = (SPARKS_VALUE * (ZORA_REWARD_PCT)) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        uint256 referrerReward = (SPARKS_VALUE * (REFERRER_REWARD_PCT)) / BPS_TO_PERCENT_2_DECIMAL_PERCISION;
-        vm.assertEq(comments.protocolRewards().balanceOf(zoraRecipient), zoraReward);
-        vm.assertEq(comments.protocolRewards().balanceOf(referrer), referrerReward);
-        vm.assertEq(comments.protocolRewards().balanceOf(tokenAdmin), SPARKS_VALUE - zoraReward - referrerReward);
-    }
-
-    function testDelegateCommentRevertsWhenMoreThanOneSpark() public {
-        uint256 quantityToMint = 1;
-        uint256 mintFee = 0.000111 ether;
-
-        uint256 sparksQuantity = 2;
-        vm.deal(commenter, mintFee * quantityToMint + SPARKS_VALUE * sparksQuantity);
-
-        vm.prank(commenter);
-        vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectETHAmountForSparks.selector, SPARKS_VALUE * sparksQuantity, SPARKS_VALUE));
-        mockDelegateCommenter.mintAndCommentWithSpark{value: SPARKS_VALUE * sparksQuantity + mintFee * quantityToMint}({
-            quantity: quantityToMint,
-            collection: address(mock1155),
-            tokenId: tokenId1,
-            comment: "test",
-            referrer: referrer,
-            sparksQuantity: sparksQuantity
         });
     }
 
