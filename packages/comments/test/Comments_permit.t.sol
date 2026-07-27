@@ -26,9 +26,8 @@ contract CommentsPermitTest is CommentsTestBase {
 
         _setupTokenAndSparks(permitComment);
 
-        // any account can execute the permit comment on behalf of the collectorWithToken, but they must have enough eth to do so.
+        // any account can execute the permit comment on behalf of the collectorWithToken.
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
 
         vm.expectEmit(true, true, true, true);
         emit IComments.Commented(
@@ -36,7 +35,7 @@ contract CommentsPermitTest is CommentsTestBase {
             expectedCommentIdentifier,
             bytes32(0),
             permitComment.replyTo,
-            1,
+            0,
             permitComment.text,
             block.timestamp,
             permitComment.referrer
@@ -54,7 +53,6 @@ contract CommentsPermitTest is CommentsTestBase {
         _setupTokenAndSparks(permitComment);
 
         // First comment should succeed
-        vm.deal(collectorWithToken, 10 ether);
         _executePermitComment(collectorWithToken, permitComment, signature);
 
         // Second comment with same nonce should fail
@@ -72,7 +70,6 @@ contract CommentsPermitTest is CommentsTestBase {
         vm.warp(permitComment.deadline + 1);
 
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
         vm.expectRevert(abi.encodeWithSelector(IComments.ERC2612ExpiredSignature.selector, permitComment.deadline));
         _executePermitComment(executor, permitComment, signature);
     }
@@ -97,9 +94,16 @@ contract CommentsPermitTest is CommentsTestBase {
 
         _setupTokenAndSparks(permitComment);
 
-        vm.expectRevert(IComments.MustSendAtLeastOneSpark.selector);
+        IComments.CommentIdentifier memory expectedCommentIdentifier = _expectedCommentIdentifier(
+            permitComment.contractAddress,
+            permitComment.tokenId,
+            permitComment.commenter
+        );
+
         vm.prank(collectorWithToken);
-        comments.permitComment{value: 0}(permitComment, signature);
+        comments.permitComment(permitComment, signature);
+
+        _assertCommentExists(expectedCommentIdentifier);
     }
 
     function testPermitComment_ZeroSparks_Creator() public {
@@ -113,7 +117,7 @@ contract CommentsPermitTest is CommentsTestBase {
         // any account can execute the permit comment on behalf of the tokenAdmin,
         // it should be executed with 0 sparks
         vm.prank(makeAddr("random account"));
-        comments.permitComment{value: 0}(permitComment, signature);
+        comments.permitComment(permitComment, signature);
 
         IComments.CommentIdentifier memory expectedCommentIdentifier = IComments.CommentIdentifier({
             commenter: tokenAdmin,
@@ -124,12 +128,22 @@ contract CommentsPermitTest is CommentsTestBase {
         _assertCommentExists(expectedCommentIdentifier);
     }
 
+    function testPermitCommentRevertsWhenPaymentSent() public {
+        IComments.PermitComment memory permitComment = _createPermitComment(collectorWithToken, "test comment");
+        bytes memory signature = _signPermitComment(permitComment, collectorWithTokenPrivateKey);
+
+        _setupTokenAndSparks(permitComment);
+
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, SPARKS_VALUE));
+        vm.prank(collectorWithToken);
+        comments.permitComment{value: SPARKS_VALUE}(permitComment, signature);
+    }
+
     function testPermitComment_Not1155Holder() public {
         IComments.PermitComment memory permitComment = _createPermitComment(collectorWithToken, "test comment");
         bytes memory signature = _signPermitComment(permitComment, collectorWithTokenPrivateKey);
 
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
         vm.expectRevert(IComments.NotTokenHolderOrAdmin.selector);
         _executePermitComment(executor, permitComment, signature);
     }
@@ -180,108 +194,17 @@ contract CommentsPermitTest is CommentsTestBase {
         );
 
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
         _executePermitComment(executor, permitComment, signature);
 
         _assertCommentExists(expectedCommentIdentifier);
     }
 
-    function testPermitSparkCommentSparksComment() public {
+    function testPermitSparkCommentDisabled() public {
         IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        _setupSparkComment(permitSparkComment);
-
-        address executor = makeAddr("executor");
-        vm.deal(executor, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-
-        uint256 beforeSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
-
-        vm.expectEmit(true, true, true, true);
-        emit IComments.SparkedComment(
-            comments.hashCommentIdentifier(permitSparkComment.comment),
-            permitSparkComment.comment,
-            permitSparkComment.sparksQuantity,
-            sparker,
-            block.timestamp,
-            permitSparkComment.referrer
-        );
-
-        _executePermitSparkComment(executor, permitSparkComment, signature);
-
-        uint256 afterSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
-        assertEq(afterSparksCount, beforeSparksCount + permitSparkComment.sparksQuantity);
-    }
-
-    function testPermitSparkComment_NonceUsedTwice() public {
-        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
-        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
-
-        _setupSparkComment(permitSparkComment);
-
-        // First spark should succeed
-        vm.deal(sparker, 10 ether);
-        _executePermitSparkComment(sparker, permitSparkComment, signature);
-
-        // Second spark with same nonce should fail
-        vm.expectRevert(abi.encodeWithSelector(UnorderedNoncesUpgradeable.InvalidAccountNonce.selector, sparker, permitSparkComment.nonce));
-        _executePermitSparkComment(sparker, permitSparkComment, signature);
-    }
-
-    function testPermitSparkComment_DeadlineExpired() public {
-        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
-        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
-
-        _setupSparkComment(permitSparkComment);
-
-        // Warp time to after the deadline
-        vm.warp(permitSparkComment.deadline + 1);
-
-        address executor = makeAddr("executor");
-        vm.deal(executor, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-        vm.expectRevert(abi.encodeWithSelector(IComments.ERC2612ExpiredSignature.selector, permitSparkComment.deadline));
-        _executePermitSparkComment(executor, permitSparkComment, signature);
-    }
-
-    function testPermitSparkComment_CommenterDoesntMatchSigner() public {
-        address wrongSigner;
-        uint256 wrongSignerPrivateKey;
-        (wrongSigner, wrongSignerPrivateKey) = makeAddrAndKey("wrongSigner");
-
-        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
-        bytes memory wrongSignature = _signPermitSparkComment(permitSparkComment, wrongSignerPrivateKey);
-
-        _setupSparkComment(permitSparkComment);
-
-        vm.expectRevert(IComments.InvalidSignature.selector);
-        _executePermitSparkComment(makeAddr("executor"), permitSparkComment, wrongSignature);
-    }
-
-    function testPermitSparkComment_ZeroSparks() public {
-        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 0);
-        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
-
-        _setupSparkComment(permitSparkComment);
-
-        vm.expectRevert(IComments.MustSendAtLeastOneSpark.selector);
-        _executePermitSparkComment(collectorWithToken, permitSparkComment, signature);
-    }
-
-    function testPermitSparkComment_IncorrectETHAmount() public {
-        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
-        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
-
-        _setupSparkComment(permitSparkComment);
-
-        address executor = makeAddr("executor");
-        uint256 incorrectValue = (permitSparkComment.sparksQuantity * SPARKS_VALUE) + 1 wei;
-        vm.deal(executor, incorrectValue);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IComments.IncorrectETHAmountForSparks.selector, incorrectValue, permitSparkComment.sparksQuantity * SPARKS_VALUE)
-        );
-        vm.prank(executor);
-        comments.permitSparkComment{value: incorrectValue}(permitSparkComment, signature);
+        vm.expectRevert(IComments.SparkingDisabled.selector);
+        _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
     }
 
     function testPermitCommentCrossChain() public {
@@ -303,7 +226,6 @@ contract CommentsPermitTest is CommentsTestBase {
         _setupTokenAndSparks(permitComment);
 
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
 
         vm.expectEmit(true, true, true, true);
         emit IComments.Commented(
@@ -311,7 +233,7 @@ contract CommentsPermitTest is CommentsTestBase {
             expectedCommentIdentifier,
             bytes32(0),
             permitComment.replyTo,
-            1,
+            0,
             permitComment.text,
             block.timestamp,
             permitComment.referrer
@@ -335,14 +257,13 @@ contract CommentsPermitTest is CommentsTestBase {
         _setupTokenAndSparks(permitComment);
 
         address executor = makeAddr("executor");
-        vm.deal(executor, SPARKS_VALUE);
 
         vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectDestinationChain.selector, invalidDestinationChainId));
         _executePermitComment(executor, permitComment, signature);
     }
 
-    function testPermitSparkCommentCrossChain() public {
-        uint32 sourceChainId = 1; // Ethereum mainnet
+    function testPermitSparkCommentCrossChainDisabled() public {
+        uint32 sourceChainId = 1;
         uint32 destinationChainId = uint32(block.chainid);
 
         IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
@@ -351,33 +272,13 @@ contract CommentsPermitTest is CommentsTestBase {
 
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        _setupSparkComment(permitSparkComment);
-
-        address executor = makeAddr("executor");
-        vm.deal(executor, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-
-        uint256 beforeSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
-
-        bytes32 commentId = comments.hashCommentIdentifier(permitSparkComment.comment);
-
-        vm.expectEmit(true, true, true, true);
-        emit IComments.SparkedComment(
-            commentId,
-            permitSparkComment.comment,
-            permitSparkComment.sparksQuantity,
-            sparker,
-            block.timestamp,
-            permitSparkComment.referrer
-        );
-        _executePermitSparkComment(executor, permitSparkComment, signature);
-
-        uint256 afterSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
-        assertEq(afterSparksCount, beforeSparksCount + permitSparkComment.sparksQuantity);
+        vm.expectRevert(IComments.SparkingDisabled.selector);
+        _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
     }
 
-    function testPermitSparkCommentCrossChainInvalidDestination() public {
-        uint32 sourceChainId = 1; // Ethereum mainnet
-        uint32 invalidDestinationChainId = 42; // Some other chain ID
+    function testPermitSparkCommentCrossChainInvalidDestinationDisabled() public {
+        uint32 sourceChainId = 1;
+        uint32 invalidDestinationChainId = 42;
 
         IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
         permitSparkComment.sourceChainId = sourceChainId;
@@ -385,13 +286,8 @@ contract CommentsPermitTest is CommentsTestBase {
 
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        _setupSparkComment(permitSparkComment);
-
-        address executor = makeAddr("executor");
-        vm.deal(executor, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-
-        vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectDestinationChain.selector, invalidDestinationChainId));
-        _executePermitSparkComment(executor, permitSparkComment, signature);
+        vm.expectRevert(IComments.SparkingDisabled.selector);
+        _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
     }
 
     function _postCommentAndCreatePermitSparkComment(address _sparker, uint64 sparksQuantity) internal returns (IComments.PermitSparkComment memory) {
@@ -428,15 +324,9 @@ contract CommentsPermitTest is CommentsTestBase {
         return _sign(privateKey, digest);
     }
 
-    function _setupSparkComment(IComments.PermitSparkComment memory permitSparkComment) internal {
-        // For permitSparkComment, we don't need to mint a token
-        vm.deal(permitSparkComment.comment.commenter, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-    }
-
     function _executePermitSparkComment(address executor, IComments.PermitSparkComment memory permitSparkComment, bytes memory signature) internal {
         vm.prank(executor);
-        vm.deal(executor, permitSparkComment.sparksQuantity * SPARKS_VALUE);
-        comments.permitSparkComment{value: permitSparkComment.sparksQuantity * SPARKS_VALUE}(permitSparkComment, signature);
+        comments.permitSparkComment(permitSparkComment, signature);
     }
 
     // Helper functions
@@ -459,12 +349,11 @@ contract CommentsPermitTest is CommentsTestBase {
 
     function _setupTokenAndSparks(IComments.PermitComment memory permitComment) internal {
         mock1155.mint(permitComment.commenter, permitComment.tokenId, 1, "");
-        vm.deal(permitComment.commenter, SPARKS_VALUE);
     }
 
     function _executePermitComment(address executor, IComments.PermitComment memory permitComment, bytes memory signature) internal {
         vm.prank(executor);
-        comments.permitComment{value: SPARKS_VALUE}(permitComment, signature);
+        comments.permitComment(permitComment, signature);
     }
 
     function _assertCommentExists(IComments.CommentIdentifier memory commentIdentifier) internal view {

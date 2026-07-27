@@ -19,6 +19,11 @@ contract MockDelegateCommenter {
         comments.delegateComment(msg.sender, collection, tokenId, comment, emptyCommentIdentifier, address(0), address(0));
     }
 
+    function mintAndComment(uint256 quantity, address collection, uint256 tokenId, string calldata comment, address referrer) external {
+        Mock1155(collection).mint(msg.sender, tokenId, quantity, "");
+        comments.delegateComment(msg.sender, collection, tokenId, comment, emptyCommentIdentifier, address(0), referrer);
+    }
+
     function mintAndCommentWithSpark(
         uint256 quantity,
         address collection,

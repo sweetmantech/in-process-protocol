@@ -190,6 +190,12 @@ interface IComments {
     /// @notice Address cannot be zero
     error AddressZero();
 
+    /// @notice Occurs when ETH is sent with a comment action that must be free
+    error CommentPaymentNotAllowed(uint256 value);
+
+    /// @notice Occurs when sparking a comment, which is disabled on In Process
+    error SparkingDisabled();
+
     /// @notice Creates a new comment
     /// @param commenter The address of the commenter
     /// @param contractAddress The address of the contract
