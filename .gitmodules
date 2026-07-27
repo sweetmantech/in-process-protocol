@@ -1,0 +1,9 @@
+[submodule "packages/comments/lib/openzeppelin-contracts"]
+	path = packages/comments/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "packages/comments/lib/openzeppelin-contracts-upgradeable"]
+	path = packages/comments/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "packages/comments/lib/forge-std"]
+	path = packages/comments/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
