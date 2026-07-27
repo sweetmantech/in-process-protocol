@@ -140,7 +140,7 @@ contract CommentsImpl is
         }
     }
 
-    /// @notice Creates a new comment. Must be a holder or creator of the referenced 1155 token. Comments are free on In Process.
+    /// @notice Creates a new comment. Must be a holder or creator of the referenced 1155 token. Free on In Process.
     /// @param contractAddress The address of the contract
     /// @param tokenId The token ID
     /// @param commenter The address of the commenter
@@ -439,14 +439,30 @@ contract CommentsImpl is
         emit Commented(commentId, commentIdentifier, replyToId, replyToIdentifier, sparksQuantity, text, timestamp, referrer);
     }
 
-    /// @notice Sparks a comment.  Equivalant sparks value in eth to sparksQuantity must be sent with the transaction.  Sparking a comment is
-    /// similar to liking it, except it is liked with the value of sparks attached.  The spark value gets sent to the commenter, with a fee taken out.
+    /// @notice Sparks a comment. Free on In Process — no ETH is required or accepted.
     /// @param commentIdentifier The identifier of the comment to spark
-    /// @param sparksQuantity The quantity of sparks to send
+    /// @param sparksQuantity The quantity of sparks to record for this spark action
     /// @param referrer The referrer of the comment
-    /// @notice Disabled on In Process — all comment interactions are free.
-    function sparkComment(CommentIdentifier calldata, uint256, address) public payable {
-        revert SparkingDisabled();
+    function sparkComment(CommentIdentifier calldata commentIdentifier, uint256 sparksQuantity, address referrer) public payable {
+        _rejectCommentPayment();
+        if (sparksQuantity == 0) {
+            revert MustSendAtLeastOneSpark();
+        }
+        _sparkComment(commentIdentifier, msg.sender, sparksQuantity, referrer);
+    }
+
+    function _sparkComment(CommentIdentifier memory commentIdentifier, address sparker, uint256 sparksQuantity, address referrer) internal {
+        if (sparker == commentIdentifier.commenter) {
+            revert CannotSparkOwnComment();
+        }
+        bytes32 commentId = hashCommentIdentifier(commentIdentifier);
+        if (!comments(commentId).exists) {
+            revert CommentDoesntExist();
+        }
+
+        comments(commentId).totalSparks += uint256(sparksQuantity);
+
+        emit SparkedComment(commentId, commentIdentifier, sparksQuantity, sparker, block.timestamp, referrer);
     }
 
     function _hashCommentIdentifier(CommentIdentifier memory commentIdentifier) internal pure returns (bytes32) {
@@ -546,9 +562,21 @@ contract CommentsImpl is
     /// by specifying the source and destination chain ids.  The signature must be signed by the sparker on the source chain.
     /// @param permit The permit spark comment struct
     /// @param signature The signature of the permit. Must be signed by the sparker.
-    /// @notice Disabled on In Process — all comment interactions are free.
-    function permitSparkComment(PermitSparkComment calldata, bytes calldata) public payable {
-        revert SparkingDisabled();
+    function permitSparkComment(PermitSparkComment calldata permit, bytes calldata signature) public payable {
+        if (permit.destinationChainId != uint32(block.chainid)) {
+            revert IncorrectDestinationChain(permit.destinationChainId);
+        }
+
+        _rejectCommentPayment();
+
+        bytes32 digest = hashPermitSparkComment(permit);
+        _validatePermit(digest, permit.nonce, signature, permit.sparker, permit.deadline);
+
+        if (permit.sparksQuantity == 0) {
+            revert MustSendAtLeastOneSpark();
+        }
+
+        _sparkComment(permit.comment, permit.sparker, permit.sparksQuantity, permit.referrer);
     }
 
     function _validateSignerIsCommenter(bytes32 digest, bytes calldata signature, address signer) internal view {

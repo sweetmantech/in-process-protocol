@@ -199,12 +199,77 @@ contract CommentsPermitTest is CommentsTestBase {
         _assertCommentExists(expectedCommentIdentifier);
     }
 
-    function testPermitSparkCommentDisabled() public {
+    function testPermitSparkCommentSparksComment() public {
         IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        vm.expectRevert(IComments.SparkingDisabled.selector);
+        uint256 beforeSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
+
+        vm.expectEmit(true, true, true, true);
+        emit IComments.SparkedComment(
+            comments.hashCommentIdentifier(permitSparkComment.comment),
+            permitSparkComment.comment,
+            permitSparkComment.sparksQuantity,
+            sparker,
+            block.timestamp,
+            permitSparkComment.referrer
+        );
+
         _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
+
+        uint256 afterSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
+        assertEq(afterSparksCount, beforeSparksCount + permitSparkComment.sparksQuantity);
+    }
+
+    function testPermitSparkComment_NonceUsedTwice() public {
+        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
+        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
+
+        _executePermitSparkComment(sparker, permitSparkComment, signature);
+
+        vm.expectRevert(abi.encodeWithSelector(UnorderedNoncesUpgradeable.InvalidAccountNonce.selector, sparker, permitSparkComment.nonce));
+        _executePermitSparkComment(sparker, permitSparkComment, signature);
+    }
+
+    function testPermitSparkComment_DeadlineExpired() public {
+        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
+        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
+
+        vm.warp(permitSparkComment.deadline + 1);
+
+        address executor = makeAddr("executor");
+        vm.expectRevert(abi.encodeWithSelector(IComments.ERC2612ExpiredSignature.selector, permitSparkComment.deadline));
+        _executePermitSparkComment(executor, permitSparkComment, signature);
+    }
+
+    function testPermitSparkComment_CommenterDoesntMatchSigner() public {
+        address wrongSigner;
+        uint256 wrongSignerPrivateKey;
+        (wrongSigner, wrongSignerPrivateKey) = makeAddrAndKey("wrongSigner");
+
+        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
+        bytes memory wrongSignature = _signPermitSparkComment(permitSparkComment, wrongSignerPrivateKey);
+
+        vm.expectRevert(IComments.InvalidSignature.selector);
+        _executePermitSparkComment(makeAddr("executor"), permitSparkComment, wrongSignature);
+    }
+
+    function testPermitSparkComment_ZeroSparks() public {
+        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 0);
+        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
+
+        vm.expectRevert(IComments.MustSendAtLeastOneSpark.selector);
+        _executePermitSparkComment(collectorWithToken, permitSparkComment, signature);
+    }
+
+    function testPermitSparkCommentRevertsWhenPaymentSent() public {
+        IComments.PermitSparkComment memory permitSparkComment = _postCommentAndCreatePermitSparkComment(sparker, 3);
+        bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
+
+        address executor = makeAddr("executor");
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, SPARKS_VALUE));
+        vm.prank(executor);
+        comments.permitSparkComment{value: SPARKS_VALUE}(permitSparkComment, signature);
     }
 
     function testPermitCommentCrossChain() public {
@@ -262,7 +327,7 @@ contract CommentsPermitTest is CommentsTestBase {
         _executePermitComment(executor, permitComment, signature);
     }
 
-    function testPermitSparkCommentCrossChainDisabled() public {
+    function testPermitSparkCommentCrossChain() public {
         uint32 sourceChainId = 1;
         uint32 destinationChainId = uint32(block.chainid);
 
@@ -272,11 +337,26 @@ contract CommentsPermitTest is CommentsTestBase {
 
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        vm.expectRevert(IComments.SparkingDisabled.selector);
+        uint256 beforeSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
+
+        bytes32 commentId = comments.hashCommentIdentifier(permitSparkComment.comment);
+
+        vm.expectEmit(true, true, true, true);
+        emit IComments.SparkedComment(
+            commentId,
+            permitSparkComment.comment,
+            permitSparkComment.sparksQuantity,
+            sparker,
+            block.timestamp,
+            permitSparkComment.referrer
+        );
         _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
+
+        uint256 afterSparksCount = comments.commentSparksQuantity(permitSparkComment.comment);
+        assertEq(afterSparksCount, beforeSparksCount + permitSparkComment.sparksQuantity);
     }
 
-    function testPermitSparkCommentCrossChainInvalidDestinationDisabled() public {
+    function testPermitSparkCommentCrossChainInvalidDestination() public {
         uint32 sourceChainId = 1;
         uint32 invalidDestinationChainId = 42;
 
@@ -286,7 +366,7 @@ contract CommentsPermitTest is CommentsTestBase {
 
         bytes memory signature = _signPermitSparkComment(permitSparkComment, sparkerPrivateKey);
 
-        vm.expectRevert(IComments.SparkingDisabled.selector);
+        vm.expectRevert(abi.encodeWithSelector(IComments.IncorrectDestinationChain.selector, invalidDestinationChainId));
         _executePermitSparkComment(makeAddr("executor"), permitSparkComment, signature);
     }
 

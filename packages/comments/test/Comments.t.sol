@@ -160,25 +160,95 @@ contract CommentsTest is CommentsTestBase {
         comments.backfillBatchAddComment(commentIdentifiers, texts, timestamps, originalTransactionHashes);
     }
 
-    function testCommentSparkCommentDisabled() public {
+    function testCommentSparkCommentWithZeroSparks() public {
         IComments.CommentIdentifier memory commentIdentifier = IComments.CommentIdentifier({
             commenter: collectorWithToken,
             contractAddress: address(mock1155),
             tokenId: tokenId1,
             nonce: bytes32(0)
         });
-        vm.expectRevert(IComments.SparkingDisabled.selector);
+        vm.expectRevert(abi.encodeWithSignature("MustSendAtLeastOneSpark()"));
         comments.sparkComment(commentIdentifier, 0, address(0));
     }
 
-    function testCommentSparkCommentDisabledWithValue() public {
+    function testCommentSparkCommentRevertsWhenPaymentSent() public {
         IComments.CommentIdentifier memory replyTo;
         IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
 
-        vm.deal(sparker, SPARKS_VALUE);
-        vm.expectRevert(IComments.SparkingDisabled.selector);
+        vm.expectRevert(abi.encodeWithSelector(IComments.CommentPaymentNotAllowed.selector, SPARKS_VALUE));
         vm.prank(sparker);
         comments.sparkComment{value: SPARKS_VALUE}(commentIdentifier, 1, address(0));
+    }
+
+    function testCommentSparkCommentOwnComment() public {
+        IComments.CommentIdentifier memory replyTo;
+        IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
+
+        vm.expectRevert(abi.encodeWithSignature("CannotSparkOwnComment()"));
+        vm.prank(collectorWithToken);
+        comments.sparkComment(commentIdentifier, 1, address(0));
+    }
+
+    function testCommentSparkCommentDoesNotExist() public {
+        IComments.CommentIdentifier memory commentIdentifier = IComments.CommentIdentifier({
+            commenter: collectorWithToken,
+            contractAddress: address(mock1155),
+            tokenId: tokenId1,
+            nonce: keccak256("123456")
+        });
+        vm.expectRevert(abi.encodeWithSignature("CommentDoesntExist()"));
+        comments.sparkComment(commentIdentifier, 1, address(0));
+    }
+
+    function testCommentSparkCommentValid(uint256 sparksQuantity) public {
+        vm.assume(sparksQuantity > 0 && sparksQuantity < 1_000_000_000_000_000);
+
+        IComments.CommentIdentifier memory replyTo;
+        IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
+
+        address commenter2 = makeAddr("commenter2");
+
+        vm.expectEmit(true, true, true, true);
+        emit IComments.SparkedComment(
+            comments.hashCommentIdentifier(commentIdentifier),
+            commentIdentifier,
+            sparksQuantity,
+            commenter2,
+            block.timestamp,
+            address(0)
+        );
+        vm.prank(commenter2);
+        comments.sparkComment(commentIdentifier, sparksQuantity, address(0));
+
+        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), 0);
+        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), 0);
+        vm.assertEq(comments.commentSparksQuantity(commentIdentifier), sparksQuantity);
+    }
+
+    function testCommentSparkCommentValidWithReferrer(uint256 sparksQuantity) public {
+        vm.assume(sparksQuantity > 0 && sparksQuantity < 1_000_000_000_000_000);
+
+        IComments.CommentIdentifier memory replyTo;
+        IComments.CommentIdentifier memory commentIdentifier = _mockComment(collectorWithToken, replyTo);
+
+        address commenter2 = makeAddr("commenter2");
+        address referrer = makeAddr("referrer");
+
+        vm.expectEmit(true, true, true, true);
+        emit IComments.SparkedComment(
+            comments.hashCommentIdentifier(commentIdentifier),
+            commentIdentifier,
+            sparksQuantity,
+            commenter2,
+            block.timestamp,
+            referrer
+        );
+        vm.prank(commenter2);
+        comments.sparkComment(commentIdentifier, sparksQuantity, referrer);
+
+        vm.assertEq(protocolRewards.balanceOf(zoraRecipient), 0);
+        vm.assertEq(protocolRewards.balanceOf(referrer), 0);
+        vm.assertEq(protocolRewards.balanceOf(collectorWithToken), 0);
     }
 
     function testCommentHashAndValidateCommentExists() public {
